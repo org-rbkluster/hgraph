@@ -132,4 +132,58 @@ public class HGraph {
 			}
 		};
 	}
+
+	public Iterable<byte[][]> getEdgesIn(final byte[] vid) throws IOException {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				Scan scan = new Scan(vid);
+				scan.setStopRow(GBytes.endKey(vid));
+				scan.addFamily(VTX_IN_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				ResultScanner scanner;
+				HTableInterface table = pool.getTable(vtxTable);
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[][]>() {
+					byte[][] next;
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[][] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+						byte[][] n = next;
+						next = null;
+						return n;
+					}
+					
+					@Override
+					public boolean hasNext() {
+						while(next == null) {
+							if(!sci.hasNext())
+								break;
+							Result r = sci.next();
+							if(r.getValue(VTX_IN_CF, vid) == null)
+								continue;
+							byte[] eid = Bytes.tail(r.getRow(), r.getRow().length - vid.length);
+							byte[] vout = r.getValue(VTX_IN_CF, vid);
+							next = new byte[][] {vout, eid, vid};
+						}
+						return next != null;
+					}
+				};
+			}
+		};
+	}
 }
