@@ -116,7 +116,7 @@ public abstract class HGraphElement implements Element {
 
 	@Override
 	public Object getId() {
-		return id;
+		return new HGraphId(id);
 	}
 	
 	@Override

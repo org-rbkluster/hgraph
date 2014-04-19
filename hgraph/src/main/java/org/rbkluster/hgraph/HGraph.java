@@ -82,9 +82,21 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		return f;
 	}
 
+	protected byte[] idToByteId(Object id) {
+		if(id == null)
+			return null;
+		if(id instanceof HGraphId)
+			id = ((HGraphId) id).getId();
+		if(id instanceof String)
+			id = new HGraphId((String) id).getId();
+		if(!(id instanceof byte[]))
+			throw new IllegalArgumentException("invalid id:" + id);
+		return (byte[]) id;
+	}
+	
 	@Override
 	public Vertex addVertex(Object id) {
-		byte[] vid = (byte[]) id;
+		byte[] vid = idToByteId(id);
 		try {
 			return new HGraphVertex(raw, raw.addVertex(vid));
 		} catch (IOException e) {
@@ -96,7 +108,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	public Vertex getVertex(Object id) {
 		if(id == null)
 			throw new IllegalArgumentException();
-		byte[] vid = (byte[]) id;
+		byte[] vid = idToByteId(id);
 		try {
 			if(!raw.vertexExists(vid))
 				return null;
@@ -108,7 +120,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public void removeVertex(Vertex vertex) {
-		byte[] vid = (byte[]) vertex.getId();
+		byte[] vid = ((HGraphId) vertex.getId()).getId();
 		try {
 			raw.removeVertex(vid);
 		} catch (IOException e) {
@@ -197,9 +209,9 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public Edge addEdge(Object id, Vertex outVertex, Vertex inVertex, String label) {
-		byte[] eid = (byte[]) id;
-		byte[] vout = (byte[]) outVertex.getId();
-		byte[] vin = (byte[]) inVertex.getId();
+		byte[] eid = idToByteId(id);
+		byte[] vout = ((HGraphId) outVertex.getId()).getId();
+		byte[] vin = ((HGraphId) inVertex.getId()).getId();
 		if(label == null)
 			throw new IllegalArgumentException();
 		Edge e;
@@ -216,7 +228,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	public Edge getEdge(Object id) {
 		if(id == null)
 			throw new IllegalArgumentException();
-		byte[] eid = (byte[]) id;
+		byte[] eid = idToByteId(id);
 		try {
 			if(!raw.edgeExists(eid))
 				return null;
@@ -228,7 +240,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public void removeEdge(Edge edge) {
-		byte[] eid = (byte[]) edge.getId();
+		byte[] eid = ((HGraphId) edge.getId()).getId();
 		try {
 			raw.removeEdge(eid);
 		} catch (IOException e) {

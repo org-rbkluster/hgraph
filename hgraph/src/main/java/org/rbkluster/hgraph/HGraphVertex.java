@@ -170,7 +170,7 @@ public class HGraphVertex extends HGraphElement implements Vertex {
 
 	@Override
 	public Edge addEdge(String label, Vertex inVertex) {
-		byte[] vin = (byte[]) inVertex.getId();
+		byte[] vin = ((HGraphId) inVertex.getId()).getId();
 		if(label == null)
 			throw new IllegalArgumentException();
 		byte[] eid;
