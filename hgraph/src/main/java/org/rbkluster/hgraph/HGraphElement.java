@@ -79,6 +79,8 @@ public abstract class HGraphElement implements Element {
 
 	@Override
 	public void setProperty(String key, Object value) {
+		if(key.isEmpty())
+			throw new IllegalArgumentException();
 		byte[] keyBytes = Bytes.toBytes(key);
 		byte[] typeKeyBytes = Bytes.add(keyBytes, TYPE_SUFFIX);
 		byte[] kryoValue = GBytes.toKryoBytes(value);

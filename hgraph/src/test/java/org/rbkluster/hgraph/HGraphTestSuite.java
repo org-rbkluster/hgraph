@@ -15,6 +15,11 @@ import com.tinkerpop.blueprints.impls.GraphTest;
 
 public class HGraphTestSuite extends GraphTest {
 
+	@Override
+	public Object convertId(Object id) {
+		return GBytes.toKryoBytes(id);
+	}
+	
 	protected String methodName;
 	
 	public void testVertexTestSuite() throws Exception {

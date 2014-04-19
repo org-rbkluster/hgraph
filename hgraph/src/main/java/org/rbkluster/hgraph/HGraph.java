@@ -62,6 +62,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		f.supportsEdgeRetrieval = true;
 		f.supportsFloatProperty = true;
 		f.supportsIndices = false;
+		f.supportsIntegerProperty = true;
 		f.supportsKeyIndices = true;
 		f.supportsLongProperty = true;
 		f.supportsMapProperty = true;
@@ -199,6 +200,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		byte[] eid = (byte[]) id;
 		byte[] vout = (byte[]) outVertex.getId();
 		byte[] vin = (byte[]) inVertex.getId();
+		if(label == null)
+			throw new IllegalArgumentException();
 		Edge e;
 		try {
 			e = new HGraphEdge(raw, raw.addEdge(eid, vout, vin));
