@@ -1,6 +1,10 @@
 package org.rbkluster.hgraph;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -47,6 +51,39 @@ public class HGraphTest extends AbstractHGraphTest {
 				found = true;
 			}
 			Assert.assertFalse("edge out found on vin", found);
+		} finally {
+			hg.dropTables();
+		}
+	}
+	
+	@Test
+	public void testIndexes() throws Exception {
+		byte[] foo = Bytes.toBytes("foo");
+		
+		HGraph hg = new HGraph(Bytes.toBytes("test"), conf);
+		hg.createTables();
+		try {
+			hg.createIndex(foo);
+			
+			byte[] v1 = Bytes.toBytes(1L);
+			byte[] v2 = Bytes.toBytes(2L);
+			byte[] bar = Bytes.toBytes("bar");
+			byte[] qux = Bytes.toBytes("qux");
+			
+			hg.addVertex(v1);
+			hg.addVertex(v2);
+			
+			hg.setVertexProperty(v1, foo, bar);
+			hg.setVertexProperty(v2, foo, qux);
+			
+			Set<byte[]> bars = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+			for(byte[][] iv : hg.getIndexedVertices(foo, bar))
+				bars.add(iv[2]);
+			
+			Set<byte[]> exp = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+			exp.add(v1);
+			
+			Assert.assertEquals(exp, bars);
 		} finally {
 			hg.dropTables();
 		}
