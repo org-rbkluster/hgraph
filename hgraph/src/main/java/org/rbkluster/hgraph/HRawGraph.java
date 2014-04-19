@@ -1,6 +1,7 @@
 package org.rbkluster.hgraph;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -26,6 +27,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import static org.rbkluster.hgraph.GConstants.*;
 
 public class HRawGraph {
+	public static final int DEFAULT_ID_LENGTH = 24;
+	
 	protected byte[] prefix;
 	protected byte[] vtxTable;
 	protected byte[] vtxPropertiesTable;
@@ -35,6 +38,8 @@ public class HRawGraph {
 	
 	protected Configuration conf;
 	protected HTablePool pool;
+	
+	protected SecureRandom random = new SecureRandom();
 	
 	public HRawGraph(byte[] prefix, Configuration conf) throws IOException {
 		this.prefix = prefix;
@@ -115,7 +120,11 @@ public class HRawGraph {
 		}
 	}
 	
-	public void addVertex(byte[] vid) throws IOException {
+	public byte[] addVertex(byte[] vid) throws IOException {
+		if(vid == null) {
+			vid = new byte[DEFAULT_ID_LENGTH];
+			random.nextBytes(vid);
+		}
 		HTableInterface table = pool.getTable(vtxTable);
 		try {
 			Put p = new Put(vid);
@@ -124,6 +133,7 @@ public class HRawGraph {
 		} finally {
 			table.close();
 		}
+		return vid;
 	}
 	
 	public void removeVertex(byte[] vid) throws IOException {
@@ -141,7 +151,11 @@ public class HRawGraph {
 		}
 	}
 	
-	public void addEdge(byte[] eid, byte[] vout, byte[] vin) throws IOException {
+	public byte[] addEdge(byte[] eid, byte[] vout, byte[] vin) throws IOException {
+		if(eid == null) {
+			eid = new byte[DEFAULT_ID_LENGTH];
+			random.nextBytes(eid);
+		}
 		HTableInterface table = pool.getTable(edgTable);
 		try {
 			Put p = new Put(eid);
@@ -163,6 +177,7 @@ public class HRawGraph {
 		} finally {
 			table.close();
 		}
+		return eid;
 	}
 	
 	public void removeEdge(byte[] eid) throws IOException {
@@ -197,6 +212,30 @@ public class HRawGraph {
 			d = new Delete(Bytes.add(vin, eid));
 			d.deleteColumn(VTX_IN_CF, vin);
 			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public byte[] getOutVertex(byte[] eid) throws IOException {
+		HTableInterface table = pool.getTable(edgTable);
+		try {
+			Get g = new Get(eid);
+			g.addColumn(EDG_CF, EDG_OUT_Q);
+			Result r = table.get(g);
+			return r.getValue(EDG_CF, EDG_OUT_Q);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public byte[] getInVertex(byte[] eid) throws IOException {
+		HTableInterface table = pool.getTable(edgTable);
+		try {
+			Get g = new Get(eid);
+			g.addColumn(EDG_CF, EDG_IN_Q);
+			Result r = table.get(g);
+			return r.getValue(EDG_CF, EDG_IN_Q);
 		} finally {
 			table.close();
 		}
