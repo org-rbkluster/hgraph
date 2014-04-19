@@ -1,7 +1,9 @@
 package org.rbkluster.hgraph;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
@@ -127,6 +129,7 @@ public class HGraph {
 			removeEdge(e[1], e[0], e[2]);
 		for(byte[][] e : getEdgesIn(vid))
 			removeEdge(e[1], e[0], e[2]);
+		removeVertexProperties(vid);
 		HTableInterface table = pool.getTable(vtxTable);
 		try {
 			Delete d = new Delete(vid);
@@ -322,6 +325,74 @@ public class HGraph {
 						table.close();
 					}
 				};
+			}
+		};
+	}
+	
+	public void setVertexProperty(byte[] vid, byte[] pkey, byte[] pval) throws IOException {
+		HTableInterface table = pool.getTable(vtxPropertiesTable);
+		try {
+			Put p = new Put(vid);
+			p.add(VTXP_CF, pkey, pval);
+			table.put(p);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public byte[] getVertexProperty(byte[] vid, byte[] pkey) throws IOException {
+		HTableInterface table = pool.getTable(vtxPropertiesTable);
+		try {
+			Get g = new Get(vid);
+			g.addColumn(VTXP_CF, pkey);
+			Result r = table.get(g);
+			return r.getValue(VTXP_CF, pkey);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public void removeVertexProperty(byte[] vid, byte[] pkey) throws IOException {
+		HTableInterface table = pool.getTable(vtxPropertiesTable);
+		try {
+			Delete d = new Delete(vid);
+			d.deleteColumn(VTXP_CF, pkey);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public void removeVertexProperties(byte[] vid) throws IOException {
+		HTableInterface table = pool.getTable(vtxPropertiesTable);
+		try {
+			Delete d = new Delete(vid);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public Iterable<byte[][]> getVertexProperties(final byte[] vid) throws IOException {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				List<byte[][]> ret = new ArrayList<>();
+				try {
+					HTableInterface table = pool.getTable(vtxPropertiesTable);
+					try {
+						Get g = new Get(vid);
+						g.addFamily(VTXP_CF);
+						Result r = table.get(g);
+						for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
+							ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
+					} finally {
+						table.close();
+					}
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				return ret.iterator();
 			}
 		};
 	}
