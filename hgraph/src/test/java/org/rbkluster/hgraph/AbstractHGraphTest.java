@@ -21,7 +21,7 @@ public abstract class AbstractHGraphTest {
 		conf = HBaseConfiguration.create();
 		
 		MiniZooKeeperCluster zoo = util.startMiniZKCluster();
-		util.startMiniHBaseCluster(1, 2);
+		util.startMiniHBaseCluster(1, 1);
 		
 		conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost");
 		conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zoo.getClientPort());

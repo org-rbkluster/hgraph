@@ -65,7 +65,17 @@ public class HGraphTestSuite extends GraphTest {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		return new HGraph(raw);
+		return new HGraph(raw) {
+			@Override
+			public void shutdown() {
+				try {
+					raw.dropTables();
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				super.shutdown();
+			}
+		};
 	}
 
 }

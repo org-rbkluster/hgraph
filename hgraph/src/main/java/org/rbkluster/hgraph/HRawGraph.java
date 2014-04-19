@@ -515,8 +515,9 @@ public class HRawGraph {
 						g.addFamily(VTXP_CF);
 						g.setMaxVersions(1);
 						Result r = table.get(g);
-						for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
-							ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
+						if(r.getFamilyMap(VTXP_CF) != null)
+							for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
+								ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
 					} finally {
 						table.close();
 					}
@@ -637,8 +638,9 @@ public class HRawGraph {
 						g.addFamily(EDGP_CF);
 						g.setMaxVersions(1);
 						Result r = table.get(g);
-						for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
-							ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
+						if(r.getFamilyMap(EDGP_CF) != null)
+							for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
+								ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
 					} finally {
 						table.close();
 					}
