@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
@@ -25,15 +29,76 @@ public class HGraph {
 	protected byte[] idxsTable;
 	protected Map<byte[], byte[]> idxTables = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 	
+	protected Configuration conf;
 	protected HTablePool pool;
 	
-	public HGraph(byte[] prefix, HTablePool pool) {
+	public HGraph(byte[] prefix, Configuration conf) {
 		this.prefix = prefix;
+		this.conf = conf;
+		pool = new HTablePool(conf, Integer.MAX_VALUE);
 		vtxTable = Bytes.add(prefix, VTX_TABLE);
 		vtxPropertiesTable = Bytes.add(prefix, VTXP_TABLE);
 		edgTable = Bytes.add(prefix, EDG_TABLE);
 		edgPropretiesTable = Bytes.add(prefix, EDGP_TABLE);
 		idxsTable = Bytes.add(prefix, IDXS_TABLE);
+	}
+	
+	public void createTables() throws IOException {
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		try {
+			HTableDescriptor d = new HTableDescriptor(vtxTable);
+			d.addFamily(new HColumnDescriptor(VTX_CF));
+			d.addFamily(new HColumnDescriptor(VTX_OUT_CF));
+			d.addFamily(new HColumnDescriptor(VTX_IN_CF));
+			admin.createTable(d);
+			
+			d = new HTableDescriptor(vtxPropertiesTable);
+			d.addFamily(new HColumnDescriptor(VTXP_CF));
+			admin.createTable(d);
+			
+			d = new HTableDescriptor(edgTable);
+			d.addFamily(new HColumnDescriptor(EDG_CF));
+			admin.createTable(d);
+			
+			d = new HTableDescriptor(edgPropretiesTable);
+			d.addFamily(new HColumnDescriptor(EDGP_CF));
+			admin.createTable(d);
+			
+			d = new HTableDescriptor(idxsTable);
+			d.addFamily(new HColumnDescriptor(IDXS_CF));
+			admin.createTable(d);
+		} finally {
+			admin.close();
+		}
+	}
+	
+	public void dropTables() throws IOException {
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		try {
+			admin.disableTable(vtxTable);
+			admin.deleteTable(vtxTable);
+			
+			admin.disableTable(vtxPropertiesTable);
+			admin.deleteTable(vtxPropertiesTable);
+			
+			admin.disableTable(edgTable);
+			admin.deleteTable(edgTable);
+			
+			admin.disableTable(edgPropretiesTable);
+			admin.deleteTable(edgPropretiesTable);
+			
+			admin.disableTable(idxsTable);
+			admin.deleteTable(idxsTable);
+			
+			for(HTableDescriptor d : admin.listTables()) {
+				if(Bytes.startsWith(d.getName(), Bytes.add(prefix, IDX_TABLE))) {
+					admin.disableTable(d.getName());
+					admin.deleteTable(d.getName());
+				}
+			}
+		} finally {
+			admin.close();
+		}
 	}
 	
 	protected byte[] idxTable(byte[] key) {

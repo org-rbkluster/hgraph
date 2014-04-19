@@ -25,8 +25,8 @@ public class GConstants {
 	
 	public static final byte[] EDGP_CF = Bytes.toBytes("edgp");
 	
-	public static final byte[] VTX_IDX_CF = Bytes.toBytes("vtx_idx");
-	public static final byte[] EDG_IDX_CF = Bytes.toBytes("edg_idx");
+	public static final byte[] IDX_VTX_CF = Bytes.toBytes("vtx_idx");
+	public static final byte[] IDX_EDG_CF = Bytes.toBytes("edg_idx");
 	
 	public static final byte[] IDXS_CF = Bytes.toBytes("idxs");
 	public static final byte[] IDXS_IS_VTX_Q = Bytes.toBytes("is_vtx");
