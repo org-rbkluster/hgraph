@@ -62,19 +62,23 @@ public class HRawGraph {
 			d.addFamily(new HColumnDescriptor(VTX_CF));
 			d.addFamily(new HColumnDescriptor(VTX_OUT_CF));
 			d.addFamily(new HColumnDescriptor(VTX_IN_CF));
-			admin.createTable(d);
+			if(!admin.tableExists(d.getName()))
+				admin.createTable(d);
 			
 			d = new HTableDescriptor(vtxPropertiesTable);
 			d.addFamily(new HColumnDescriptor(VTXP_CF));
-			admin.createTable(d);
+			if(!admin.tableExists(d.getName()))
+				admin.createTable(d);
 			
 			d = new HTableDescriptor(edgTable);
 			d.addFamily(new HColumnDescriptor(EDG_CF));
-			admin.createTable(d);
+			if(!admin.tableExists(d.getName()))
+				admin.createTable(d);
 			
 			d = new HTableDescriptor(edgPropertiesTable);
 			d.addFamily(new HColumnDescriptor(EDGP_CF));
-			admin.createTable(d);
+			if(!admin.tableExists(d.getName()))
+				admin.createTable(d);
 		} finally {
 			admin.close();
 		}
@@ -99,21 +103,34 @@ public class HRawGraph {
 	public void dropTables() throws IOException {
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
-			admin.disableTable(vtxTable);
-			admin.deleteTable(vtxTable);
+			if(admin.tableExists(vtxTable)) {
+				if(!admin.isTableDisabled(vtxTable))
+					admin.disableTable(vtxTable);
+				admin.deleteTable(vtxTable);
+			}
 			
-			admin.disableTable(vtxPropertiesTable);
-			admin.deleteTable(vtxPropertiesTable);
+			if(admin.tableExists(vtxPropertiesTable)) {
+				if(!admin.isTableDisabled(vtxPropertiesTable))
+					admin.disableTable(vtxPropertiesTable);
+				admin.deleteTable(vtxPropertiesTable);
+			}
 			
-			admin.disableTable(edgTable);
-			admin.deleteTable(edgTable);
+			if(admin.tableExists(edgTable)) {
+				if(!admin.isTableDisabled(edgTable))
+					admin.disableTable(edgTable);
+				admin.deleteTable(edgTable);
+			}
 			
-			admin.disableTable(edgPropertiesTable);
-			admin.deleteTable(edgPropertiesTable);
+			if(admin.tableExists(edgPropertiesTable)) {
+				if(!admin.isTableDisabled(edgPropertiesTable))
+					admin.disableTable(edgPropertiesTable);
+				admin.deleteTable(edgPropertiesTable);
+			}
 			
 			for(HTableDescriptor d : admin.listTables()) {
 				if(Bytes.startsWith(d.getName(), Bytes.add(prefix, IDX_TABLE))) {
-					admin.disableTable(d.getName());
+					if(!admin.isTableDisabled(d.getName()))
+						admin.disableTable(d.getName());
 					admin.deleteTable(d.getName());
 				}
 			}

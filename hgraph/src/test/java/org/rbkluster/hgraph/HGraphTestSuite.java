@@ -15,6 +15,8 @@ import com.tinkerpop.blueprints.impls.GraphTest;
 
 public class HGraphTestSuite extends GraphTest {
 
+	protected String methodName;
+	
 	public void testVertexTestSuite() throws Exception {
 		this.stopWatch();
 		doTestSuite(new VertexTestSuite(this));
@@ -40,7 +42,7 @@ public class HGraphTestSuite extends GraphTest {
 	}
 
 	public Graph generateGraph() {
-		return generateGraph(new Object().toString());
+		return generateGraph(methodName);
 	}
 
 	public void doTestSuite(final TestSuite testSuite) throws Exception {
@@ -48,8 +50,24 @@ public class HGraphTestSuite extends GraphTest {
 		if (doTest == null || doTest.equals("true")) {
 			for (Method method : testSuite.getClass().getDeclaredMethods()) {
 				if (method.getName().startsWith("test")) {
+					methodName = method.getName();
+					
+					HRawGraph raw;
+					try {
+						raw = new HRawGraph(Bytes.toBytes(methodName), AbstractHGraphTest.conf);
+						raw.dropTables();
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
 					System.out.println("Testing " + method.getName() + "...");
 					method.invoke(testSuite);
+					methodName = null;
+					
+					try {
+						raw.dropTables();
+					} catch(IOException e) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		}
@@ -57,25 +75,17 @@ public class HGraphTestSuite extends GraphTest {
 
 	@Override
 	public Graph generateGraph(String graphDirectoryName) {
+		if(graphDirectoryName == null)
+			graphDirectoryName = new Object().toString();
 		graphDirectoryName = graphDirectoryName.replaceAll("[^a-zA-Z_0-9\\-.]", "_");
 		HRawGraph raw;
 		try {
 			raw = new HRawGraph(Bytes.toBytes(graphDirectoryName), AbstractHGraphTest.conf);
 			raw.createTables();
+			return new HGraph(raw);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		return new HGraph(raw) {
-			@Override
-			public void shutdown() {
-				try {
-					raw.dropTables();
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-				super.shutdown();
-			}
-		};
 	}
 
 }

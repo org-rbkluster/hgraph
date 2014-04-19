@@ -17,6 +17,10 @@ public abstract class AbstractHGraphTest {
 	public static void beforeClass() throws Exception {
 		DOMConfigurator.configure(AbstractHGraphTest.class.getResource("log4j.xml"));
 		
+		System.setProperty("java.io.tmpdir", "target/hbase-tmp");
+		System.setProperty("user.home", "target/hbase-home");
+		System.setProperty(HBaseTestingUtility.BASE_TEST_DIRECTORY_KEY, "target/hbase");
+		
 		util = new HBaseTestingUtility();
 		conf = HBaseConfiguration.create();
 		

@@ -18,11 +18,27 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.DefaultGraphQuery;
 
 public class HGraph implements Graph, KeyIndexableGraph {
+	private static final byte[] META_ROW = Bytes.toBytes(HGraph.class.getName() + ".META_ROW");
+	private static final byte[] VERTEX_INDEXES = Bytes.toBytes("vertex_indexes");
+	private static final byte[] EDGE_INDEXES = Bytes.toBytes("edge_indexes");
 
 	protected HRawGraph raw;
+	protected Set<String> vertexIndexes = new TreeSet<>();
+	protected Set<String> edgeIndexes = new TreeSet<>();
 	
-	public HGraph(HRawGraph raw) {
+	public HGraph(HRawGraph raw) throws IOException {
 		this.raw = raw;
+		raw.addVertex(META_ROW);
+		
+		if(raw.getVertexProperty(META_ROW, VERTEX_INDEXES) == null)
+			raw.setVertexProperty(META_ROW, VERTEX_INDEXES, GBytes.toKryoBytes(vertexIndexes));
+		if(raw.getVertexProperty(META_ROW, EDGE_INDEXES) == null)
+			raw.setVertexProperty(META_ROW, EDGE_INDEXES, GBytes.toKryoBytes(edgeIndexes));
+		
+		if(raw.getVertexProperty(META_ROW, VERTEX_INDEXES) != null)
+			vertexIndexes = (Set<String>) GBytes.fromKryoBytes(raw.getVertexProperty(META_ROW, VERTEX_INDEXES));
+		if(raw.getVertexProperty(META_ROW, EDGE_INDEXES) != null)
+			edgeIndexes = (Set<String>) GBytes.fromKryoBytes(raw.getVertexProperty(META_ROW, EDGE_INDEXES));
 	}
 	
 	@Override
@@ -73,6 +89,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public Vertex getVertex(Object id) {
+		if(id == null)
+			return null;
 		byte[] vid = (byte[]) id;
 		try {
 			if(!raw.vertexExists(vid))
@@ -147,6 +165,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public Edge getEdge(Object id) {
+		if(id == null)
+			return null;
 		byte[] eid = (byte[]) id;
 		try {
 			if(!raw.edgeExists(eid))
@@ -220,9 +240,14 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public <T extends Element> void dropKeyIndex(String key, Class<T> elementClass) {
+		if(elementClass == Vertex.class)
+			vertexIndexes.remove(key);
+		if(elementClass == Edge.class)
+			edgeIndexes.remove(key);
 		try {
-			raw.dropIndex(Bytes.toBytes(key));
-		} catch (IOException e) {
+			raw.setVertexProperty(META_ROW, VERTEX_INDEXES, GBytes.toKryoBytes(vertexIndexes));
+			raw.setVertexProperty(META_ROW, EDGE_INDEXES, GBytes.toKryoBytes(edgeIndexes));
+		} catch(IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -230,19 +255,25 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public <T extends Element> void createKeyIndex(String key, Class<T> elementClass, Parameter... indexParameters) {
+		if(elementClass == Vertex.class)
+			vertexIndexes.add(key);
+		if(elementClass == Edge.class)
+			edgeIndexes.add(key);
 		try {
-			raw.createIndex(Bytes.toBytes(key));
-		} catch (IOException e) {
+			raw.setVertexProperty(META_ROW, VERTEX_INDEXES, GBytes.toKryoBytes(vertexIndexes));
+			raw.setVertexProperty(META_ROW, EDGE_INDEXES, GBytes.toKryoBytes(edgeIndexes));
+		} catch(IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	public <T extends Element> Set<String> getIndexedKeys(Class<T> elementClass) {
-		Set<String> iks = new TreeSet<>();
-		for(byte[] ik : raw.getIndexKeys())
-			iks.add(Bytes.toString(ik));
-		return iks;
+		if(elementClass == Vertex.class)
+			return vertexIndexes;
+		if(elementClass == Edge.class)
+			return edgeIndexes;
+		return null;
 	}
 
 }
