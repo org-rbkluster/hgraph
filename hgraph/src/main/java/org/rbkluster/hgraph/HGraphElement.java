@@ -82,14 +82,6 @@ public abstract class HGraphElement implements Element {
 		byte[] kryoValue = GBytes.toKryoBytes(value);
 		byte[] keyValue = Bytes.tail(kryoValue, kryoValue.length - 1);
 		byte[] typeValue = Bytes.head(kryoValue, 1);
-		
-		if(!raw.getIndexKeys().contains(keyBytes))
-			try {
-				raw.createIndex(keyBytes);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		
 		setRawProperty(keyBytes, keyValue);
 		setRawProperty(typeKeyBytes, typeValue);
 	}

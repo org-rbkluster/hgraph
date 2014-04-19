@@ -171,6 +171,45 @@ public class HRawGraph {
 		}
 	}
 	
+	public Iterable<byte[]> getAllVertices() {
+		return new Iterable<byte[]>() {
+			@Override
+			public Iterator<byte[]> iterator() {
+				Scan scan = new Scan();
+				scan.addFamily(VTX_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				scan.setMaxVersions(1);
+				HTableInterface table = pool.getTable(vtxTable);
+				ResultScanner scanner;
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[]>() {
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[] next() {
+						return sci.next().getRow();
+					}
+					
+					@Override
+					public boolean hasNext() {
+						return sci.hasNext();
+					}
+				};
+			}
+		};
+	}
+	
 	public void removeVertex(byte[] vid) throws IOException {
 		for(byte[][] e : getEdgesOut(vid))
 			removeEdge(e[1], e[0], e[2]);
@@ -225,6 +264,45 @@ public class HRawGraph {
 		} finally {
 			table.close();
 		}
+	}
+	
+	public Iterable<byte[]> getAllEdges() {
+		return new Iterable<byte[]>() {
+			@Override
+			public Iterator<byte[]> iterator() {
+				Scan scan = new Scan();
+				scan.addFamily(EDG_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				scan.setMaxVersions(1);
+				HTableInterface table = pool.getTable(edgTable);
+				ResultScanner scanner;
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[]>() {
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[] next() {
+						return sci.next().getRow();
+					}
+					
+					@Override
+					public boolean hasNext() {
+						return sci.hasNext();
+					}
+				};
+			}
+		};
 	}
 	
 	public void removeEdge(byte[] eid) throws IOException {

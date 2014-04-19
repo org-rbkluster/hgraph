@@ -7,6 +7,8 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Features;
@@ -52,7 +54,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		f.supportsDoubleProperty = true;
 		f.supportsDuplicateEdges = true;
 		f.supportsEdgeIndex = false;
-		f.supportsEdgeIteration = false;
+		f.supportsEdgeIteration = true;
 		f.supportsEdgeKeyIndex = true;
 		f.supportsEdgeProperties = true;
 		f.supportsEdgeRetrieval = true;
@@ -70,7 +72,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		f.supportsTransactions = false;
 		f.supportsUniformListProperty = true;
 		f.supportsVertexIndex = false;
-		f.supportsVertexIteration = false;
+		f.supportsVertexIteration = true;
 		f.supportsVertexKeyIndex = true;
 		f.supportsVertexProperties = true;
 		
@@ -113,22 +115,11 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public Iterable<Vertex> getVertices() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Iterable<Vertex> getVertices(String key, Object value) {
-		final byte[] ikey = Bytes.toBytes(key);
-		byte[] kryoValue = GBytes.toKryoBytes(value);
-		final byte[] ivalue = Bytes.tail(kryoValue, kryoValue.length - 1);
-		if(!raw.getIndexKeys().contains(ikey))
-			throw new IllegalArgumentException("No index for property:" + key);
 		return new Iterable<Vertex>() {
 			@Override
 			public Iterator<Vertex> iterator() {
-				final Iterator<byte[][]> ii = raw.getIndexedVertices(ikey, ivalue).iterator();
+				final Iterator<byte[]> vids = raw.getAllVertices().iterator();
 				return new Iterator<Vertex>() {
-					
 					@Override
 					public void remove() {
 						throw new UnsupportedOperationException();
@@ -136,16 +127,54 @@ public class HGraph implements Graph, KeyIndexableGraph {
 					
 					@Override
 					public Vertex next() {
-						return new HGraphVertex(raw, ii.next()[2]);
+						return new HGraphVertex(raw, vids.next());
 					}
 					
 					@Override
 					public boolean hasNext() {
-						return ii.hasNext();
+						return vids.hasNext();
 					}
 				};
 			}
 		};
+	}
+
+	@Override
+	public Iterable<Vertex> getVertices(final String key, final Object value) {
+		if(vertexIndexes.contains(key)) {
+			return new Iterable<Vertex>() {
+				@Override
+				public Iterator<Vertex> iterator() {
+					byte[] pkey = Bytes.toBytes(key);
+					byte[] pval = GBytes.toKryoBytes(value);
+					pval = Bytes.tail(pval, pval.length - 1);
+					final Iterator<byte[][]> vids = raw.getIndexedVertices(pkey, pval).iterator();
+					return new Iterator<Vertex>() {
+						@Override
+						public void remove() {
+							throw new UnsupportedOperationException();
+						}
+						
+						@Override
+						public Vertex next() {
+							return new HGraphVertex(raw, vids.next()[2]);
+						}
+						
+						@Override
+						public boolean hasNext() {
+							return vids.hasNext();
+						}
+					};
+				}
+			};
+		}
+		Predicate<Vertex> pred = new Predicate<Vertex>() {
+			@Override
+			public boolean apply(Vertex input) {
+				return value == null ? input.getProperty(key) == null : value.equals(input.getProperty(key));
+			}
+		};
+		return Iterables.filter(getVertices(), pred);
 	}
 
 	@Override
@@ -189,22 +218,11 @@ public class HGraph implements Graph, KeyIndexableGraph {
 
 	@Override
 	public Iterable<Edge> getEdges() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Iterable<Edge> getEdges(String key, Object value) {
-		final byte[] ikey = Bytes.toBytes(key);
-		byte[] kryoValue = GBytes.toKryoBytes(value);
-		final byte[] ivalue = Bytes.tail(kryoValue, kryoValue.length - 1);
-		if(!raw.getIndexKeys().contains(ikey))
-			throw new IllegalArgumentException("No index for property:" + key);
 		return new Iterable<Edge>() {
 			@Override
 			public Iterator<Edge> iterator() {
-				final Iterator<byte[][]> ii = raw.getIndexedEdges(ikey, ivalue).iterator();
+				final Iterator<byte[]> eids = raw.getAllEdges().iterator();
 				return new Iterator<Edge>() {
-					
 					@Override
 					public void remove() {
 						throw new UnsupportedOperationException();
@@ -212,16 +230,54 @@ public class HGraph implements Graph, KeyIndexableGraph {
 					
 					@Override
 					public Edge next() {
-						return new HGraphEdge(raw, ii.next()[2]);
+						return new HGraphEdge(raw, eids.next());
 					}
 					
 					@Override
 					public boolean hasNext() {
-						return ii.hasNext();
+						return eids.hasNext();
 					}
 				};
 			}
 		};
+	}
+
+	@Override
+	public Iterable<Edge> getEdges(final String key, final Object value) {
+		if(edgeIndexes.contains(key)) {
+			return new Iterable<Edge>() {
+				@Override
+				public Iterator<Edge> iterator() {
+					byte[] pkey = Bytes.toBytes(key);
+					byte[] pval = GBytes.toKryoBytes(value);
+					pval = Bytes.tail(pval, pval.length - 1);
+					final Iterator<byte[][]> eids = raw.getIndexedEdges(pkey, pval).iterator();
+					return new Iterator<Edge>() {
+						@Override
+						public void remove() {
+							throw new UnsupportedOperationException();
+						}
+						
+						@Override
+						public Edge next() {
+							return new HGraphEdge(raw, eids.next()[2]);
+						}
+						
+						@Override
+						public boolean hasNext() {
+							return eids.hasNext();
+						}
+					};
+				}
+			};
+		}
+		Predicate<Edge> pred = new Predicate<Edge>() {
+			@Override
+			public boolean apply(Edge input) {
+				return value == null ? input.getProperty(key) == null : value.equals(input.getProperty(key));
+			}
+		};
+		return Iterables.filter(getEdges(), pred);
 	}
 
 	@Override
