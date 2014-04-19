@@ -1,32 +1,29 @@
 package org.rbkluster.hgraph;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
 import org.junit.Test;
 
-import com.tinkerpop.blueprints.EdgeTestSuite;
-import com.tinkerpop.blueprints.GraphTestSuite;
-import com.tinkerpop.blueprints.KeyIndexableGraphTestSuite;
-import com.tinkerpop.blueprints.VertexTestSuite;
+import com.tinkerpop.blueprints.Vertex;
 
 public class HGraphTest extends AbstractHGraphTest {
-	
 	@Test
-	public void testVertexTestSuite() throws Exception {
-		new HGraphTestSuite().testVertexTestSuite();
-	}
+	public void testProperties() throws Exception {
+		HRawGraph raw = new HRawGraph(Bytes.toBytes("proptest"), conf);
+		raw.createTables();
+		try {
+			HGraph g = new HGraph(raw);
 
-	@Test
-	public void testEdgeTestSuite() throws Exception {
-		new HGraphTestSuite().testEdgeTestSuite();
-	}
+			Vertex v = g.addVertex(null);
 
-	@Test
-	public void testGraphTestSuite() throws Exception {
-		new HGraphTestSuite().testGraphTestSuite();
+			v.setProperty("foo", "bar");
+			Assert.assertEquals("bar", v.getProperty("foo"));
+			
+			Assert.assertTrue(g.getVertices().iterator().hasNext());
+			Assert.assertTrue(g.getVertices("foo", "bar").iterator().hasNext());
+			
+		} finally {
+			raw.dropTables();
+		}
 	}
-
-	@Test
-	public void testKeyIndexableGraphTestSuite() throws Exception {
-		new HGraphTestSuite().testKeyIndexableGraphTestSuite();
-	}
-
 }

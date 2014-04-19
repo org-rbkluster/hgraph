@@ -62,6 +62,10 @@ public class HRawGraph {
 		return table;
 	}
 	
+	protected void repool(HTableInterface table) throws IOException {
+		_pool.putTable(table);
+	}
+	
 	public void createTables() throws IOException {
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
@@ -172,7 +176,7 @@ public class HRawGraph {
 			p.add(VTX_CF, VTX_IS_Q, TRUE);
 			table.put(p);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		return vid;
 	}
@@ -185,7 +189,7 @@ public class HRawGraph {
 			g.addColumn(VTX_CF, VTX_IS_Q);
 			return table.get(g).getValue(VTX_CF, VTX_IS_Q) != null;
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -225,7 +229,7 @@ public class HRawGraph {
 					public boolean hasNext() {
 						if(!sci.hasNext())
 							try {
-								table.close();
+								repool(table);
 							} catch (IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -234,7 +238,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -252,7 +256,7 @@ public class HRawGraph {
 			Delete d = new Delete(vid);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -269,7 +273,7 @@ public class HRawGraph {
 			p.add(EDG_CF, EDG_IN_Q, vin);
 			table.put(p);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		table = table(vtxTable);
 		try {
@@ -280,7 +284,7 @@ public class HRawGraph {
 			p.add(VTX_IN_CF, vin, vout);
 			table.put(p);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		return eid;
 	}
@@ -293,7 +297,7 @@ public class HRawGraph {
 			g.addColumn(EDG_CF, EDG_IS_Q);
 			return table.get(g).getValue(EDG_CF, EDG_IS_Q) != null;
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -333,7 +337,7 @@ public class HRawGraph {
 					public boolean hasNext() {
 						if(!sci.hasNext())
 							try {
-								table.close();
+								repool(table);
 							} catch (IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -342,7 +346,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -360,7 +364,7 @@ public class HRawGraph {
 			vout = r.getValue(EDG_CF, EDG_OUT_Q);
 			vin = r.getValue(EDG_CF, EDG_IN_Q);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		removeEdge(eid, vout, vin);
 	}
@@ -372,7 +376,7 @@ public class HRawGraph {
 			Delete d = new Delete(eid);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		table = table(vtxTable);
 		try {
@@ -383,7 +387,7 @@ public class HRawGraph {
 			d.deleteColumn(VTX_IN_CF, vin);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -396,7 +400,7 @@ public class HRawGraph {
 			Result r = table.get(g);
 			return r.getValue(EDG_CF, EDG_OUT_Q);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -409,7 +413,7 @@ public class HRawGraph {
 			Result r = table.get(g);
 			return r.getValue(EDG_CF, EDG_IN_Q);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -463,7 +467,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -472,7 +476,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -529,7 +533,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -538,7 +542,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -554,7 +558,7 @@ public class HRawGraph {
 			p.add(VTXP_CF, pkey, pval);
 			table.put(p);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		
 		if(idxTables.containsKey(pkey)) {
@@ -564,7 +568,7 @@ public class HRawGraph {
 				p.add(IDX_VTX_CF, pval, vid);
 				table.put(p);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -578,7 +582,7 @@ public class HRawGraph {
 			Result r = table.get(g);
 			return r.getValue(VTXP_CF, pkey);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -593,7 +597,7 @@ public class HRawGraph {
 			d.deleteColumn(VTXP_CF, pkey);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		
 		if(idxTables.containsKey(pkey) && pval != null) {
@@ -603,7 +607,7 @@ public class HRawGraph {
 				d.deleteColumn(IDX_VTX_CF, pval);
 				table.delete(d);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -615,7 +619,7 @@ public class HRawGraph {
 			d.deleteColumn(VTXP_CF, pkey);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 		
 		if(idxTables.containsKey(pkey)) {
@@ -625,7 +629,7 @@ public class HRawGraph {
 				d.deleteColumn(IDX_VTX_CF, pval);
 				table.delete(d);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -638,7 +642,7 @@ public class HRawGraph {
 			Delete d = new Delete(vid);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -658,7 +662,7 @@ public class HRawGraph {
 							for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
 								ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
 					} finally {
-						table.close();
+						repool(table);
 					}
 				} catch(IOException e) {
 					throw new RuntimeException(e);
@@ -677,7 +681,7 @@ public class HRawGraph {
 			p.add(EDGP_CF, pkey, pval);
 			table.put(p);
 		} finally {
-			table.close();
+			repool(table);
 		}
 
 		if(idxTables.containsKey(pkey)) {
@@ -687,7 +691,7 @@ public class HRawGraph {
 				p.add(IDX_EDG_CF, pval, eid);
 				table.put(p);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -701,7 +705,7 @@ public class HRawGraph {
 			Result r = table.get(g);
 			return r.getValue(EDGP_CF, pkey);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -716,7 +720,7 @@ public class HRawGraph {
 			d.deleteColumn(EDGP_CF, pkey);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 
 		if(idxTables.containsKey(pkey) && pval != null) {
@@ -726,7 +730,7 @@ public class HRawGraph {
 				d.deleteColumn(IDX_EDG_CF, pval);
 				table.delete(d);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -738,7 +742,7 @@ public class HRawGraph {
 			d.deleteColumn(EDGP_CF, pkey);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 
 		if(idxTables.containsKey(pkey)) {
@@ -748,7 +752,7 @@ public class HRawGraph {
 				d.deleteColumn(IDX_EDG_CF, pval);
 				table.delete(d);
 			} finally {
-				table.close();
+				repool(table);
 			}
 		}
 	}
@@ -761,7 +765,7 @@ public class HRawGraph {
 			Delete d = new Delete(eid);
 			table.delete(d);
 		} finally {
-			table.close();
+			repool(table);
 		}
 	}
 	
@@ -781,7 +785,7 @@ public class HRawGraph {
 							for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
 								ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
 					} finally {
-						table.close();
+						repool(table);
 					}
 				} catch(IOException e) {
 					throw new RuntimeException(e);
@@ -901,7 +905,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -910,7 +914,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -972,7 +976,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -981,7 +985,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -1037,7 +1041,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -1046,7 +1050,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
@@ -1108,7 +1112,7 @@ public class HRawGraph {
 						}
 						if(next == null)
 							try {
-								table.close();
+								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
@@ -1117,7 +1121,7 @@ public class HRawGraph {
 					
 					@Override
 					protected void finalize() throws Throwable {
-						table.close();
+						repool(table);
 					}
 				};
 			}
