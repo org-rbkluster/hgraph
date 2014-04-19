@@ -29,7 +29,7 @@ public class HGraph {
 	protected byte[] vtxTable;
 	protected byte[] vtxPropertiesTable;
 	protected byte[] edgTable;
-	protected byte[] edgPropretiesTable;
+	protected byte[] edgPropertiesTable;
 	protected byte[] idxsTable;
 	protected Map<byte[], byte[]> idxTables = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 	
@@ -43,7 +43,7 @@ public class HGraph {
 		vtxTable = Bytes.add(prefix, VTX_TABLE);
 		vtxPropertiesTable = Bytes.add(prefix, VTXP_TABLE);
 		edgTable = Bytes.add(prefix, EDG_TABLE);
-		edgPropretiesTable = Bytes.add(prefix, EDGP_TABLE);
+		edgPropertiesTable = Bytes.add(prefix, EDGP_TABLE);
 		idxsTable = Bytes.add(prefix, IDXS_TABLE);
 	}
 	
@@ -64,7 +64,7 @@ public class HGraph {
 			d.addFamily(new HColumnDescriptor(EDG_CF));
 			admin.createTable(d);
 			
-			d = new HTableDescriptor(edgPropretiesTable);
+			d = new HTableDescriptor(edgPropertiesTable);
 			d.addFamily(new HColumnDescriptor(EDGP_CF));
 			admin.createTable(d);
 			
@@ -88,8 +88,8 @@ public class HGraph {
 			admin.disableTable(edgTable);
 			admin.deleteTable(edgTable);
 			
-			admin.disableTable(edgPropretiesTable);
-			admin.deleteTable(edgPropretiesTable);
+			admin.disableTable(edgPropertiesTable);
+			admin.deleteTable(edgPropertiesTable);
 			
 			admin.disableTable(idxsTable);
 			admin.deleteTable(idxsTable);
@@ -179,6 +179,7 @@ public class HGraph {
 	}
 	
 	public void removeEdge(byte[] eid, byte[] vout, byte[] vin) throws IOException {
+		removeEdgeProperties(eid);
 		HTableInterface table = pool.getTable(edgTable);
 		try {
 			Delete d = new Delete(eid);
@@ -386,6 +387,74 @@ public class HGraph {
 						Result r = table.get(g);
 						for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
 							ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
+					} finally {
+						table.close();
+					}
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				return ret.iterator();
+			}
+		};
+	}
+
+	public void setEdgeProperty(byte[] eid, byte[] pkey, byte[] pval) throws IOException {
+		HTableInterface table = pool.getTable(edgPropertiesTable);
+		try {
+			Put p = new Put(eid);
+			p.add(EDGP_CF, pkey, pval);
+			table.put(p);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public byte[] getEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
+		HTableInterface table = pool.getTable(edgPropertiesTable);
+		try {
+			Get g = new Get(eid);
+			g.addColumn(EDGP_CF, pkey);
+			Result r = table.get(g);
+			return r.getValue(EDGP_CF, pkey);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public void removeEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
+		HTableInterface table = pool.getTable(edgPropertiesTable);
+		try {
+			Delete d = new Delete(eid);
+			d.deleteColumn(EDGP_CF, pkey);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public void removeEdgeProperties(byte[] eid) throws IOException {
+		HTableInterface table = pool.getTable(edgPropertiesTable);
+		try {
+			Delete d = new Delete(eid);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public Iterable<byte[][]> getEdgeProperties(final byte[] eid) throws IOException {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				List<byte[][]> ret = new ArrayList<>();
+				try {
+					HTableInterface table = pool.getTable(edgPropertiesTable);
+					try {
+						Get g = new Get(eid);
+						g.addFamily(EDGP_CF);
+						Result r = table.get(g);
+						for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
+							ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
 					} finally {
 						table.close();
 					}
