@@ -2,6 +2,7 @@ package org.rbkluster.hgraph;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -636,7 +637,7 @@ public class HGraph {
 							if(r.getValue(IDX_VTX_CF, pval) == null)
 								continue;
 							byte[] vid = r.getValue(IDX_VTX_CF, pval);
-							next = new byte[][] {pkey, pval, vid};
+							next = new byte[][]	 {pkey, pval, vid};
 						}
 						if(next == null)
 							try {
@@ -655,7 +656,76 @@ public class HGraph {
 			}
 		};
 	}
-
+	
+	public Iterable<byte[][]> getIndexedVertices(final byte[] pkey, final byte[] pvalStart, final byte[] pvalStop) {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				Scan scan = new Scan(pvalStart);
+				scan.setStopRow(GBytes.endKey(pvalStop));
+				scan.addFamily(IDX_VTX_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				ResultScanner scanner;
+				final HTableInterface table = pool.getTable(idxTables.get(pkey));
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[][]>() {
+					byte[][] next;
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[][] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+						byte[][] n = next;
+						next = null;
+						return n;
+					}
+					
+					@Override
+					public boolean hasNext() {
+						while(next == null) {
+							if(!sci.hasNext())
+								break;
+							Result r = sci.next();
+							if(r.getFamilyMap(IDX_VTX_CF) == null)
+								continue;
+							for(byte[] pval : r.getFamilyMap(IDX_VTX_CF).keySet()) {
+								Comparator<byte[]> c = Bytes.BYTES_COMPARATOR;
+								if(c.compare(pvalStart, pval) <= 0 && c.compare(pval, pvalStop) < 0) {
+									byte[] vid = r.getValue(IDX_VTX_CF, pval);
+									next = new byte[][]	 {pkey, pval, vid};
+									break;
+								}
+							}
+						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
+						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
+					}
+				};
+			}
+		};
+	}
 
 	public Iterable<byte[][]> getIndexedEdges(final byte[] pkey, final byte[] pval) {
 		return new Iterable<byte[][]>() {
@@ -700,8 +770,78 @@ public class HGraph {
 							Result r = sci.next();
 							if(r.getValue(IDX_EDG_CF, pval) == null)
 								continue;
-							byte[] eid = r.getValue(IDX_EDG_CF, pval);
-							next = new byte[][] {pkey, pval, eid};
+							byte[] vid = r.getValue(IDX_EDG_CF, pval);
+							next = new byte[][]	 {pkey, pval, vid};
+						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
+						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
+					}
+				};
+			}
+		};
+	}
+
+	public Iterable<byte[][]> getIndexedEdges(final byte[] pkey, final byte[] pvalStart, final byte[] pvalStop) {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				Scan scan = new Scan(pvalStart);
+				scan.setStopRow(GBytes.endKey(pvalStop));
+				scan.addFamily(IDX_EDG_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				ResultScanner scanner;
+				final HTableInterface table = pool.getTable(idxTables.get(pkey));
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[][]>() {
+					byte[][] next;
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[][] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+						byte[][] n = next;
+						next = null;
+						return n;
+					}
+					
+					@Override
+					public boolean hasNext() {
+						while(next == null) {
+							if(!sci.hasNext())
+								break;
+							Result r = sci.next();
+							if(r.getFamilyMap(IDX_EDG_CF) == null)
+								continue;
+							for(byte[] pval : r.getFamilyMap(IDX_EDG_CF).keySet()) {
+								Comparator<byte[]> c = Bytes.BYTES_COMPARATOR;
+								if(c.compare(pvalStart, pval) <= 0 && c.compare(pval, pvalStop) < 0) {
+									byte[] eid = r.getValue(IDX_EDG_CF, pval);
+									next = new byte[][]	 {pkey, pval, eid};
+									break;
+								}
+							}
 						}
 						if(next == null)
 							try {
