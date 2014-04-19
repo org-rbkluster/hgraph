@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.util.StringFactory;
 
 public abstract class HGraphElement implements Element {
 	public static final byte[] TYPE_SUFFIX = Bytes.toBytes("_type");
@@ -81,6 +82,8 @@ public abstract class HGraphElement implements Element {
 	public void setProperty(String key, Object value) {
 		if(key.isEmpty() || "id".equals(key))
 			throw new IllegalArgumentException();
+		if((this instanceof Edge) && StringFactory.LABEL.equals(key))
+			throw new IllegalArgumentException();
 		byte[] keyBytes = Bytes.toBytes(key);
 		byte[] typeKeyBytes = Bytes.add(keyBytes, TYPE_SUFFIX);
 		byte[] kryoValue = GBytes.toKryoBytes(value);
@@ -135,6 +138,15 @@ public abstract class HGraphElement implements Element {
 			return Arrays.equals(id, o.id);
 		}
 		return false;
+	}
+	
+	@Override
+	public String toString() {
+		if(this instanceof Vertex)
+			return StringFactory.vertexString((Vertex) this);
+		if(this instanceof Edge)
+			return StringFactory.edgeString((Edge) this);
+		throw new IllegalStateException("neither vertex nor edge:" + this);
 	}
 
 }

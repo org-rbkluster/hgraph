@@ -20,6 +20,7 @@ import com.tinkerpop.blueprints.KeyIndexableGraph;
 import com.tinkerpop.blueprints.Parameter;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.DefaultGraphQuery;
+import com.tinkerpop.blueprints.util.StringFactory;
 
 public class HGraph implements Graph, KeyIndexableGraph {
 	private static final byte[] META_ROW = Bytes.toBytes(HGraph.class.getName() + ".META_ROW");
@@ -90,7 +91,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		if(id instanceof String)
 			id = new HGraphId((String) id).getId();
 		if(!(id instanceof byte[]))
-			throw new IllegalArgumentException("invalid id:" + id);
+			return null;
 		return (byte[]) id;
 	}
 	
@@ -109,6 +110,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		if(id == null)
 			throw new IllegalArgumentException();
 		byte[] vid = idToByteId(id);
+		if(vid == null)
+			return null;
 		try {
 			if(!raw.vertexExists(vid))
 				return null;
@@ -229,6 +232,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		if(id == null)
 			throw new IllegalArgumentException();
 		byte[] eid = idToByteId(id);
+		if(eid == null)
+			return null;
 		try {
 			if(!raw.edgeExists(eid))
 				return null;
@@ -383,4 +388,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		return null;
 	}
 
+	@Override
+	public String toString() {
+		return StringFactory.graphString(this, Bytes.toString(raw.getPrefix()));
+	}
 }

@@ -1123,4 +1123,8 @@ public class HRawGraph {
 			}
 		};
 	}
+
+	public byte[] getPrefix() {
+		return prefix;
+	}
 }
