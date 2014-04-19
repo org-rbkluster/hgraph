@@ -58,6 +58,7 @@ public abstract class HGraphElement implements Element {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getProperty(String key) {
 		byte[] keyBytes = Bytes.toBytes(key);

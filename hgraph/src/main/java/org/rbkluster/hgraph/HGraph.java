@@ -227,6 +227,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public <T extends Element> void createKeyIndex(String key, Class<T> elementClass, Parameter... indexParameters) {
 		try {

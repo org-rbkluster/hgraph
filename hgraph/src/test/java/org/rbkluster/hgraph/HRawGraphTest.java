@@ -1,8 +1,6 @@
 package org.rbkluster.hgraph;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -13,6 +11,7 @@ import org.junit.Test;
 public class HRawGraphTest extends AbstractHGraphTest {
 	
 	
+	@SuppressWarnings("unused")
 	@Test
 	public void testEdgesInOut() throws Exception {
 		HRawGraph hg = new HRawGraph(Bytes.toBytes("test"), conf);
