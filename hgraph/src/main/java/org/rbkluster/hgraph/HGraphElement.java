@@ -111,6 +111,10 @@ public abstract class HGraphElement implements Element {
 			throw new IllegalArgumentException();
 		if((this instanceof Edge) && StringFactory.LABEL.equals(key))
 			throw new IllegalArgumentException();
+		forceProperty(key, value);
+	}
+
+	protected void forceProperty(String key, Object value) {
 		byte[] keyBytes = Bytes.toBytes(key);
 		byte[] typeKeyBytes = Bytes.add(keyBytes, TYPE_SUFFIX);
 		byte[] kryoValue = GBytes.toKryoBytes(value);
@@ -119,7 +123,7 @@ public abstract class HGraphElement implements Element {
 		setRawProperty(keyBytes, keyValue);
 		setRawProperty(typeKeyBytes, typeValue);
 	}
-
+	
 	@Override
 	public <T> T removeProperty(String key) {
 		T val = getProperty(key);

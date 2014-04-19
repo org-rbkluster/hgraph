@@ -217,13 +217,13 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		byte[] vin = ((HGraphId) inVertex.getId()).getId();
 		if(label == null)
 			throw new IllegalArgumentException();
-		Edge e;
+		HGraphEdge e;
 		try {
 			e = new HGraphEdge(raw, raw.addEdge(eid, vout, vin));
 		} catch (IOException ex) {
 			throw new RuntimeException(ex);
 		}
-		e.setProperty(HGraphEdge.LABEL, label);
+		e.forceProperty(HGraphEdge.LABEL, label);
 		return e;
 	}
 

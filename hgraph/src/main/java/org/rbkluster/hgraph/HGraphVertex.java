@@ -180,7 +180,7 @@ public class HGraphVertex extends HGraphElement implements Vertex {
 			throw new RuntimeException(e);
 		}
 		HGraphEdge e = new HGraphEdge(raw, eid);
-		e.setProperty(HGraphEdge.LABEL, label);
+		e.forceProperty(HGraphEdge.LABEL, label);
 		return e;
 	}
 
