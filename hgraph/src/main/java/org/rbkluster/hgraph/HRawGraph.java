@@ -58,7 +58,7 @@ public class HRawGraph {
 	
 	protected HTableInterface table(byte[] tableName) {
 		HTableInterface table = _pool.getTable(tableName);
-		table.setAutoFlush(true);
+//		table.setAutoFlush(true);
 		return table;
 	}
 	
@@ -212,6 +212,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[]>() {
+					boolean closed;
 					
 					@Override
 					public void remove() {
@@ -222,23 +223,24 @@ public class HRawGraph {
 					public byte[] next() {
 						if(!hasNext())
 							throw new NoSuchElementException();
-						return sci.next().getRow();
+						try {
+							return sci.next().getRow();
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
 					public boolean hasNext() {
-						if(!sci.hasNext())
+						if(!sci.hasNext() && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch (IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return sci.hasNext();
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -320,6 +322,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[]>() {
+					boolean closed;
 					
 					@Override
 					public void remove() {
@@ -330,23 +333,24 @@ public class HRawGraph {
 					public byte[] next() {
 						if(!hasNext())
 							throw new NoSuchElementException();
-						return sci.next().getRow();
+						try {
+							return sci.next().getRow();
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
 					public boolean hasNext() {
-						if(!sci.hasNext())
+						if(!sci.hasNext() && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch (IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return sci.hasNext();
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -437,6 +441,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -450,7 +455,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -465,18 +474,15 @@ public class HRawGraph {
 							byte[] vin = r.getValue(VTX_OUT_CF, vid);
 							next = new byte[][] {vid, eid, vin};
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -503,6 +509,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -516,7 +523,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -531,18 +542,15 @@ public class HRawGraph {
 							byte[] vout = r.getValue(VTX_IN_CF, vid);
 							next = new byte[][] {vout, eid, vid};
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -876,6 +884,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -889,7 +898,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -903,18 +916,15 @@ public class HRawGraph {
 							byte[] vid = r.getValue(IDX_VTX_CF, pval);
 							next = new byte[][]	 {pkey, pval, vid};
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -941,6 +951,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -954,7 +965,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -974,18 +989,15 @@ public class HRawGraph {
 								}
 							}
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -1012,6 +1024,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -1025,7 +1038,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -1039,18 +1056,15 @@ public class HRawGraph {
 							byte[] vid = r.getValue(IDX_EDG_CF, pval);
 							next = new byte[][]	 {pkey, pval, vid};
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}
@@ -1077,6 +1091,7 @@ public class HRawGraph {
 				final Iterator<Result> sci = scanner.iterator();
 				
 				return new Iterator<byte[][]>() {
+					boolean closed;
 					byte[][] next;
 					
 					@Override
@@ -1090,7 +1105,11 @@ public class HRawGraph {
 							throw new NoSuchElementException();
 						byte[][] n = next;
 						next = null;
-						return n;
+						try {
+							return n;
+						} finally {
+							hasNext();
+						}
 					}
 					
 					@Override
@@ -1110,18 +1129,15 @@ public class HRawGraph {
 								}
 							}
 						}
-						if(next == null)
+						if(next == null && !closed) {
+							closed = true;
 							try {
 								repool(table);
 							} catch(IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
 						return next != null;
-					}
-					
-					@Override
-					protected void finalize() throws Throwable {
-						repool(table);
 					}
 				};
 			}

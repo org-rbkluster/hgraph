@@ -11,22 +11,22 @@ public class HGraphBlueprintsTest extends AbstractHGraphTest {
 	
 	@Test
 	public void testVertexTestSuite() throws Exception {
-		new HGraphTestSuite().testVertexTestSuite();
+		new HGraphBlueprintsTestSuite().testVertexTestSuite();
 	}
 
 	@Test
 	public void testEdgeTestSuite() throws Exception {
-		new HGraphTestSuite().testEdgeTestSuite();
+		new HGraphBlueprintsTestSuite().testEdgeTestSuite();
 	}
 
 	@Test
 	public void testGraphTestSuite() throws Exception {
-		new HGraphTestSuite().testGraphTestSuite();
+		new HGraphBlueprintsTestSuite().testGraphTestSuite();
 	}
 
 	@Test
 	public void testKeyIndexableGraphTestSuite() throws Exception {
-		new HGraphTestSuite().testKeyIndexableGraphTestSuite();
+		new HGraphBlueprintsTestSuite().testKeyIndexableGraphTestSuite();
 	}
 
 }

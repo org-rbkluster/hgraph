@@ -2,6 +2,9 @@ package org.rbkluster.hgraph;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -13,7 +16,7 @@ import com.tinkerpop.blueprints.TestSuite;
 import com.tinkerpop.blueprints.VertexTestSuite;
 import com.tinkerpop.blueprints.impls.GraphTest;
 
-public class HGraphTestSuite extends GraphTest {
+public class HGraphBlueprintsTestSuite extends GraphTest {
 
 	protected String methodName;
 	
@@ -48,7 +51,15 @@ public class HGraphTestSuite extends GraphTest {
 	public void doTestSuite(final TestSuite testSuite) throws Exception {
 		String doTest = System.getProperty("testTinkerGraph");
 		if (doTest == null || doTest.equals("true")) {
-			for (Method method : testSuite.getClass().getDeclaredMethods()) {
+			Method[] dm = testSuite.getClass().getDeclaredMethods();
+			Comparator<Method> NAME_ORDER = new Comparator<Method>() {
+				@Override
+				public int compare(Method o1, Method o2) {
+					return o1.getName().compareToIgnoreCase(o2.getName());
+				}
+			};
+			Collections.sort(Arrays.asList(dm), NAME_ORDER);
+			for (Method method : dm) {
 				if (method.getName().startsWith("test")) {
 					methodName = method.getName();
 					
