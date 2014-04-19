@@ -306,6 +306,13 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		} catch(IOException e) {
 			throw new RuntimeException(e);
 		}
+		byte[] pkey = Bytes.toBytes(key);
+		if(!vertexIndexes.contains(key) && !edgeIndexes.contains(key) && raw.getIndexKeys().contains(pkey))
+			try {
+				raw.dropIndex(pkey);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -321,6 +328,13 @@ public class HGraph implements Graph, KeyIndexableGraph {
 		} catch(IOException e) {
 			throw new RuntimeException(e);
 		}
+		byte[] pkey = Bytes.toBytes(key);
+		if(!raw.getIndexKeys().contains(pkey))
+			try {
+				raw.createIndex(pkey);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 	}
 
 	@Override
