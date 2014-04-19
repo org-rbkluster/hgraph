@@ -154,7 +154,7 @@ public class HGraph {
 				scan.setBatch(8192);
 				scan.setCaching(8192);
 				ResultScanner scanner;
-				HTableInterface table = pool.getTable(vtxTable);
+				final HTableInterface table = pool.getTable(vtxTable);
 				try {
 					scanner = table.getScanner(scan);
 				} catch(IOException e) {
@@ -191,7 +191,18 @@ public class HGraph {
 							byte[] vin = r.getValue(VTX_OUT_CF, vid);
 							next = new byte[][] {vid, eid, vin};
 						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
 						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
 					}
 				};
 			}
@@ -208,7 +219,7 @@ public class HGraph {
 				scan.setBatch(8192);
 				scan.setCaching(8192);
 				ResultScanner scanner;
-				HTableInterface table = pool.getTable(vtxTable);
+				final HTableInterface table = pool.getTable(vtxTable);
 				try {
 					scanner = table.getScanner(scan);
 				} catch(IOException e) {
@@ -245,7 +256,18 @@ public class HGraph {
 							byte[] vout = r.getValue(VTX_IN_CF, vid);
 							next = new byte[][] {vout, eid, vid};
 						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
 						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
 					}
 				};
 			}
