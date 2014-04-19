@@ -638,7 +638,6 @@ public class HRawGraph {
 		try {
 			Get g = new Get(vid);
 			g.addColumn(VTXP_CF, pkey);
-			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(VTXP_CF, pkey);
 		} finally {
@@ -716,7 +715,6 @@ public class HRawGraph {
 					try {
 						Get g = new Get(vid);
 						g.addFamily(VTXP_CF);
-						g.setMaxVersions(1);
 						Result r = table.get(g);
 						if(r.getFamilyMap(VTXP_CF) != null)
 							for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
@@ -761,7 +759,6 @@ public class HRawGraph {
 		try {
 			Get g = new Get(eid);
 			g.addColumn(EDGP_CF, pkey);
-			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(EDGP_CF, pkey);
 		} finally {
@@ -839,7 +836,6 @@ public class HRawGraph {
 					try {
 						Get g = new Get(eid);
 						g.addFamily(EDGP_CF);
-						g.setMaxVersions(1);
 						Result r = table.get(g);
 						if(r.getFamilyMap(EDGP_CF) != null)
 							for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
