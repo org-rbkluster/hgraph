@@ -3,6 +3,7 @@ package org.rbkluster.hgraph;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -74,8 +75,31 @@ public abstract class HGraphElement implements Element {
 
 	@Override
 	public Set<String> getPropertyKeys() {
-		// TODO Auto-generated method stub
-		return null;
+		Set<String> keys = new TreeSet<>();
+		
+		Iterable<byte[][]> pki;
+		try {
+			if(this instanceof Vertex)
+				pki = raw.getVertexProperties(id);
+			else if(this instanceof Edge)
+				pki = raw.getEdgeProperties(id);
+			else
+				throw new IllegalStateException("neither vertex nor edge:" + this);
+		} catch(IOException e) {
+			throw new RuntimeException(e);
+		}
+		
+		for(byte[][] pk : pki) {
+			byte[] k = pk[0];
+			if(k.length > TYPE_SUFFIX.length) {
+				byte[] tail = Bytes.tail(k, TYPE_SUFFIX.length);
+				if(Arrays.equals(tail, TYPE_SUFFIX))
+					continue;
+			}
+			keys.add(Bytes.toString(k));
+		}
+		
+		return keys;
 	}
 
 	@Override

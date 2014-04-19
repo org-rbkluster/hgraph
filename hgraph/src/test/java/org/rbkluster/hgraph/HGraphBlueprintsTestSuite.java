@@ -72,6 +72,7 @@ public class HGraphBlueprintsTestSuite extends GraphTest {
 					}
 					try {
 						System.out.println("Testing " + method.getName() + "...");
+						System.out.flush();
 						method.invoke(testSuite);
 					} finally {
 						methodName = null;
