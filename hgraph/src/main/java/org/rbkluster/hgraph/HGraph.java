@@ -9,6 +9,8 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
@@ -120,6 +122,20 @@ public class HGraph {
 		}
 	}
 	
+	public void removeVertex(byte[] vid) throws IOException {
+		for(byte[][] e : getEdgesOut(vid))
+			removeEdge(e[1], e[0], e[2]);
+		for(byte[][] e : getEdgesIn(vid))
+			removeEdge(e[1], e[0], e[2]);
+		HTableInterface table = pool.getTable(vtxTable);
+		try {
+			Delete d = new Delete(vid);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+	}
+	
 	public void addEdge(byte[] eid, byte[] vout, byte[] vin) throws IOException {
 		HTableInterface table = pool.getTable(edgTable);
 		try {
@@ -139,6 +155,42 @@ public class HGraph {
 			p = new Put(Bytes.add(vin, eid));
 			p.add(VTX_IN_CF, vin, vout);
 			table.put(p);
+		} finally {
+			table.close();
+		}
+	}
+	
+	public void removeEdge(byte[] eid) throws IOException {
+		HTableInterface table = pool.getTable(edgTable);
+		byte[] vout, vin;
+		try {
+			Get g = new Get(eid);
+			g.addFamily(EDG_CF);
+			Result r = table.get(g);
+			vout = r.getValue(EDG_CF, EDG_OUT_Q);
+			vin = r.getValue(EDG_CF, EDG_IN_Q);
+		} finally {
+			table.close();
+		}
+		removeEdge(eid, vout, vin);
+	}
+	
+	public void removeEdge(byte[] eid, byte[] vout, byte[] vin) throws IOException {
+		HTableInterface table = pool.getTable(edgTable);
+		try {
+			Delete d = new Delete(eid);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+		table = pool.getTable(vtxTable);
+		try {
+			Delete d = new Delete(Bytes.add(vout, eid));
+			d.deleteColumn(VTX_OUT_CF, vout);
+			table.delete(d);
+			d = new Delete(Bytes.add(vin, eid));
+			d.deleteColumn(VTX_IN_CF, vin);
+			table.delete(d);
 		} finally {
 			table.close();
 		}
