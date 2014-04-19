@@ -365,6 +365,32 @@ public class HGraph {
 		}
 	}
 	
+	public void removeVertexProperty(byte[] vid, byte[] pkey) throws IOException {
+		byte[] pval = null;
+		if(idxTables.containsKey(pkey))
+			pval = getVertexProperty(vid, pkey);
+		
+		HTableInterface table = pool.getTable(vtxPropertiesTable);
+		try {
+			Delete d = new Delete(vid);
+			d.deleteColumn(VTXP_CF, pkey);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+		
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Delete d = new Delete(Bytes.add(pval, vid));
+				d.deleteColumn(IDX_VTX_CF, pval);
+				table.delete(d);
+			} finally {
+				table.close();
+			}
+		}
+	}
+	
 	public void removeVertexProperty(byte[] vid, byte[] pkey, byte[] pval) throws IOException {
 		HTableInterface table = pool.getTable(vtxPropertiesTable);
 		try {
@@ -454,6 +480,32 @@ public class HGraph {
 			return r.getValue(EDGP_CF, pkey);
 		} finally {
 			table.close();
+		}
+	}
+	
+	public void removeEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
+		byte[] pval = null;
+		if(idxTables.containsKey(pkey))
+			pval = getEdgeProperty(eid, pkey);
+		
+		HTableInterface table = pool.getTable(edgPropertiesTable);
+		try {
+			Delete d = new Delete(eid);
+			d.deleteColumn(EDGP_CF, pkey);
+			table.delete(d);
+		} finally {
+			table.close();
+		}
+
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Delete d = new Delete(Bytes.add(pval, eid));
+				d.deleteColumn(IDX_EDG_CF, pval);
+				table.delete(d);
+			} finally {
+				table.close();
+			}
 		}
 	}
 	

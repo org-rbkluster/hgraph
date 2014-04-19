@@ -82,6 +82,14 @@ public class HGraphTest extends AbstractHGraphTest {
 			
 			Set<byte[]> exp = new TreeSet<>(Bytes.BYTES_COMPARATOR);
 			exp.add(v1);
+
+			Assert.assertEquals(exp, bars);
+
+			hg.removeVertexProperty(v1, foo);
+			
+			bars.clear(); exp.clear();
+			for(byte[][] iv : hg.getIndexedVertices(foo, bar))
+				bars.add(iv[2]);
 			
 			Assert.assertEquals(exp, bars);
 		} finally {
