@@ -10,12 +10,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class HGraphTest extends AbstractHGraphTest {
+public class HRawGraphTest extends AbstractHGraphTest {
 	
 	
 	@Test
 	public void testEdgesInOut() throws Exception {
-		HGraph hg = new HGraph(Bytes.toBytes("test"), conf);
+		HRawGraph hg = new HRawGraph(Bytes.toBytes("test"), conf);
 		hg.createTables();
 		try {
 			byte[] vout = Bytes.toBytes(1L);
@@ -60,7 +60,7 @@ public class HGraphTest extends AbstractHGraphTest {
 	public void testIndexes() throws Exception {
 		byte[] foo = Bytes.toBytes("foo");
 		
-		HGraph hg = new HGraph(Bytes.toBytes("test"), conf);
+		HRawGraph hg = new HRawGraph(Bytes.toBytes("test"), conf);
 		hg.createTables();
 		try {
 			hg.createIndex(foo);

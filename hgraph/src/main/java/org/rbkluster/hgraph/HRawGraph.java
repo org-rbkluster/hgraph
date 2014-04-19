@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.rbkluster.hgraph.GConstants.*;
 
-public class HGraph {
+public class HRawGraph {
 	protected byte[] prefix;
 	protected byte[] vtxTable;
 	protected byte[] vtxPropertiesTable;
@@ -36,7 +36,7 @@ public class HGraph {
 	protected Configuration conf;
 	protected HTablePool pool;
 	
-	public HGraph(byte[] prefix, Configuration conf) throws IOException {
+	public HRawGraph(byte[] prefix, Configuration conf) throws IOException {
 		this.prefix = prefix;
 		this.conf = conf;
 		pool = new HTablePool(conf, Integer.MAX_VALUE);
