@@ -95,7 +95,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	@Override
 	public Vertex getVertex(Object id) {
 		if(id == null)
-			return null;
+			throw new IllegalArgumentException();
 		byte[] vid = (byte[]) id;
 		try {
 			if(!raw.vertexExists(vid))
@@ -215,7 +215,7 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	@Override
 	public Edge getEdge(Object id) {
 		if(id == null)
-			return null;
+			throw new IllegalArgumentException();
 		byte[] eid = (byte[]) id;
 		try {
 			if(!raw.edgeExists(eid))
