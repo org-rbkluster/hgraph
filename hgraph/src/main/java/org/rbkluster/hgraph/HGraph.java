@@ -30,13 +30,12 @@ public class HGraph {
 	protected byte[] vtxPropertiesTable;
 	protected byte[] edgTable;
 	protected byte[] edgPropertiesTable;
-	protected byte[] idxsTable;
 	protected Map<byte[], byte[]> idxTables = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 	
 	protected Configuration conf;
 	protected HTablePool pool;
 	
-	public HGraph(byte[] prefix, Configuration conf) {
+	public HGraph(byte[] prefix, Configuration conf) throws IOException {
 		this.prefix = prefix;
 		this.conf = conf;
 		pool = new HTablePool(conf, Integer.MAX_VALUE);
@@ -44,7 +43,8 @@ public class HGraph {
 		vtxPropertiesTable = Bytes.add(prefix, VTXP_TABLE);
 		edgTable = Bytes.add(prefix, EDG_TABLE);
 		edgPropertiesTable = Bytes.add(prefix, EDGP_TABLE);
-		idxsTable = Bytes.add(prefix, IDXS_TABLE);
+		
+		loadIndexTables();
 	}
 	
 	public void createTables() throws IOException {
@@ -67,10 +67,22 @@ public class HGraph {
 			d = new HTableDescriptor(edgPropertiesTable);
 			d.addFamily(new HColumnDescriptor(EDGP_CF));
 			admin.createTable(d);
-			
-			d = new HTableDescriptor(idxsTable);
-			d.addFamily(new HColumnDescriptor(IDXS_CF));
-			admin.createTable(d);
+		} finally {
+			admin.close();
+		}
+	}
+	
+	public void loadIndexTables() throws IOException {
+		idxTables.clear();
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		try {
+			for(HTableDescriptor d : admin.listTables()) {
+				byte[] p = Bytes.add(prefix, IDX_TABLE);
+				if(Bytes.startsWith(d.getName(), p)) {
+					byte[] k = Bytes.tail(d.getName(), d.getName().length - p.length);
+					idxTables.put(k, d.getName());
+				}
+			}
 		} finally {
 			admin.close();
 		}
@@ -91,9 +103,6 @@ public class HGraph {
 			admin.disableTable(edgPropertiesTable);
 			admin.deleteTable(edgPropertiesTable);
 			
-			admin.disableTable(idxsTable);
-			admin.deleteTable(idxsTable);
-			
 			for(HTableDescriptor d : admin.listTables()) {
 				if(Bytes.startsWith(d.getName(), Bytes.add(prefix, IDX_TABLE))) {
 					admin.disableTable(d.getName());
@@ -103,14 +112,6 @@ public class HGraph {
 		} finally {
 			admin.close();
 		}
-	}
-	
-	protected byte[] idxTable(byte[] key) {
-		byte[] t = idxTables.get(key);
-		if(t != null)
-			return t;
-		idxTables.put(key, t = Bytes.add(prefix, IDX_TABLE, key));
-		return t;
 	}
 	
 	public void addVertex(byte[] vid) throws IOException {
@@ -339,6 +340,17 @@ public class HGraph {
 		} finally {
 			table.close();
 		}
+		
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Put p = new Put(Bytes.add(pval, vid));
+				p.add(IDX_VTX_CF, pval, vid);
+				table.put(p);
+			} finally {
+				table.close();
+			}
+		}
 	}
 	
 	public byte[] getVertexProperty(byte[] vid, byte[] pkey) throws IOException {
@@ -353,7 +365,7 @@ public class HGraph {
 		}
 	}
 	
-	public void removeVertexProperty(byte[] vid, byte[] pkey) throws IOException {
+	public void removeVertexProperty(byte[] vid, byte[] pkey, byte[] pval) throws IOException {
 		HTableInterface table = pool.getTable(vtxPropertiesTable);
 		try {
 			Delete d = new Delete(vid);
@@ -362,9 +374,22 @@ public class HGraph {
 		} finally {
 			table.close();
 		}
+		
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Delete d = new Delete(Bytes.add(pval, vid));
+				d.deleteColumn(IDX_VTX_CF, pval);
+				table.delete(d);
+			} finally {
+				table.close();
+			}
+		}
 	}
 	
 	public void removeVertexProperties(byte[] vid) throws IOException {
+		for(byte[][] p : getVertexProperties(vid))
+			removeVertexProperty(vid, p[0], p[1]);
 		HTableInterface table = pool.getTable(vtxPropertiesTable);
 		try {
 			Delete d = new Delete(vid);
@@ -407,6 +432,17 @@ public class HGraph {
 		} finally {
 			table.close();
 		}
+
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Put p = new Put(Bytes.add(pval, eid));
+				p.add(IDX_EDG_CF, pval, eid);
+				table.put(p);
+			} finally {
+				table.close();
+			}
+		}
 	}
 	
 	public byte[] getEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
@@ -421,7 +457,7 @@ public class HGraph {
 		}
 	}
 	
-	public void removeEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
+	public void removeEdgeProperty(byte[] eid, byte[] pkey, byte[] pval) throws IOException {
 		HTableInterface table = pool.getTable(edgPropertiesTable);
 		try {
 			Delete d = new Delete(eid);
@@ -430,9 +466,22 @@ public class HGraph {
 		} finally {
 			table.close();
 		}
+
+		if(idxTables.containsKey(pkey)) {
+			table = pool.getTable(idxTables.get(pkey));
+			try {
+				Delete d = new Delete(Bytes.add(pval, eid));
+				d.deleteColumn(IDX_EDG_CF, pval);
+				table.delete(d);
+			} finally {
+				table.close();
+			}
+		}
 	}
 	
 	public void removeEdgeProperties(byte[] eid) throws IOException {
+		for(byte[][] p : getEdgeProperties(eid))
+			removeEdgeProperty(eid, p[0], p[1]);
 		HTableInterface table = pool.getTable(edgPropertiesTable);
 		try {
 			Delete d = new Delete(eid);
@@ -464,5 +513,30 @@ public class HGraph {
 				return ret.iterator();
 			}
 		};
+	}
+
+	public void createIndex(byte[] pkey) throws IOException {
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		try {
+			HTableDescriptor d = new HTableDescriptor(Bytes.add(prefix, IDX_TABLE, pkey));
+			d.addFamily(new HColumnDescriptor(IDX_VTX_CF));
+			d.addFamily(new HColumnDescriptor(IDX_EDG_CF));
+			admin.createTable(d);
+			
+			idxTables.put(pkey, d.getName());
+		} finally {
+			admin.close();
+		}
+	}
+	
+	public void dropIndex(byte[] key) throws IOException {
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		try {
+			admin.disableTable(idxTables.get(key));
+			admin.deleteTable(idxTables.get(key));
+			idxTables.remove(key);
+		} finally {
+			admin.close();
+		}
 	}
 }
