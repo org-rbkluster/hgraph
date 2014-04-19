@@ -1,6 +1,7 @@
 package org.rbkluster.hgraph;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,6 +82,14 @@ public abstract class HGraphElement implements Element {
 		byte[] kryoValue = GBytes.toKryoBytes(value);
 		byte[] keyValue = Bytes.tail(kryoValue, kryoValue.length - 1);
 		byte[] typeValue = Bytes.head(kryoValue, 1);
+		
+		if(!raw.getIndexKeys().contains(keyBytes))
+			try {
+				raw.createIndex(keyBytes);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		
 		setRawProperty(keyBytes, keyValue);
 		setRawProperty(typeKeyBytes, typeValue);
 	}
@@ -112,6 +121,24 @@ public abstract class HGraphElement implements Element {
 	@Override
 	public Object getId() {
 		return id;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Arrays.hashCode(id);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj == null)
+			return false;
+		if(obj == this)
+			return true;
+		if(getClass() == obj.getClass()) {
+			HGraphElement o = (HGraphElement) obj;
+			return Arrays.equals(id, o.id);
+		}
+		return false;
 	}
 
 }

@@ -146,6 +146,7 @@ public class HRawGraph {
 		HTableInterface table = pool.getTable(vtxTable);
 		try {
 			Get g = new Get(vid);
+			g.setMaxVersions(1);
 			g.addColumn(VTX_CF, VTX_IS_Q);
 			return table.get(g).getValue(VTX_CF, VTX_IS_Q) != null;
 		} finally {
@@ -201,6 +202,7 @@ public class HRawGraph {
 		HTableInterface table = pool.getTable(edgTable);
 		try {
 			Get g = new Get(eid);
+			g.setMaxVersions(1);
 			g.addColumn(EDG_CF, EDG_IS_Q);
 			return table.get(g).getValue(EDG_CF, EDG_IS_Q) != null;
 		} finally {
@@ -214,6 +216,7 @@ public class HRawGraph {
 		try {
 			Get g = new Get(eid);
 			g.addFamily(EDG_CF);
+			g.setMaxVersions(1);
 			Result r = table.get(g);
 			vout = r.getValue(EDG_CF, EDG_OUT_Q);
 			vin = r.getValue(EDG_CF, EDG_IN_Q);
@@ -250,6 +253,7 @@ public class HRawGraph {
 		try {
 			Get g = new Get(eid);
 			g.addColumn(EDG_CF, EDG_OUT_Q);
+			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(EDG_CF, EDG_OUT_Q);
 		} finally {
@@ -262,6 +266,7 @@ public class HRawGraph {
 		try {
 			Get g = new Get(eid);
 			g.addColumn(EDG_CF, EDG_IN_Q);
+			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(EDG_CF, EDG_IN_Q);
 		} finally {
@@ -278,6 +283,7 @@ public class HRawGraph {
 				scan.addFamily(VTX_OUT_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(vtxTable);
 				try {
@@ -343,6 +349,7 @@ public class HRawGraph {
 				scan.addFamily(VTX_IN_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(vtxTable);
 				try {
@@ -400,6 +407,8 @@ public class HRawGraph {
 	}
 	
 	public void setVertexProperty(byte[] vid, byte[] pkey, byte[] pval) throws IOException {
+		removeVertexProperty(vid, pkey);
+		
 		HTableInterface table = pool.getTable(vtxPropertiesTable);
 		try {
 			Put p = new Put(vid);
@@ -426,6 +435,7 @@ public class HRawGraph {
 		try {
 			Get g = new Get(vid);
 			g.addColumn(VTXP_CF, pkey);
+			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(VTXP_CF, pkey);
 		} finally {
@@ -447,7 +457,7 @@ public class HRawGraph {
 			table.close();
 		}
 		
-		if(idxTables.containsKey(pkey)) {
+		if(idxTables.containsKey(pkey) && pval != null) {
 			table = pool.getTable(idxTables.get(pkey));
 			try {
 				Delete d = new Delete(Bytes.add(pval, vid));
@@ -503,6 +513,7 @@ public class HRawGraph {
 					try {
 						Get g = new Get(vid);
 						g.addFamily(VTXP_CF);
+						g.setMaxVersions(1);
 						Result r = table.get(g);
 						for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
 							ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
@@ -518,6 +529,8 @@ public class HRawGraph {
 	}
 
 	public void setEdgeProperty(byte[] eid, byte[] pkey, byte[] pval) throws IOException {
+		removeEdgeProperty(eid, pkey);
+		
 		HTableInterface table = pool.getTable(edgPropertiesTable);
 		try {
 			Put p = new Put(eid);
@@ -544,6 +557,7 @@ public class HRawGraph {
 		try {
 			Get g = new Get(eid);
 			g.addColumn(EDGP_CF, pkey);
+			g.setMaxVersions(1);
 			Result r = table.get(g);
 			return r.getValue(EDGP_CF, pkey);
 		} finally {
@@ -565,7 +579,7 @@ public class HRawGraph {
 			table.close();
 		}
 
-		if(idxTables.containsKey(pkey)) {
+		if(idxTables.containsKey(pkey) && pval != null) {
 			table = pool.getTable(idxTables.get(pkey));
 			try {
 				Delete d = new Delete(Bytes.add(pval, eid));
@@ -621,6 +635,7 @@ public class HRawGraph {
 					try {
 						Get g = new Get(eid);
 						g.addFamily(EDGP_CF);
+						g.setMaxVersions(1);
 						Result r = table.get(g);
 						for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
 							ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
@@ -673,6 +688,7 @@ public class HRawGraph {
 				scan.addFamily(IDX_VTX_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(idxTables.get(pkey));
 				try {
@@ -737,6 +753,7 @@ public class HRawGraph {
 				scan.addFamily(IDX_VTX_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(idxTables.get(pkey));
 				try {
@@ -807,6 +824,7 @@ public class HRawGraph {
 				scan.addFamily(IDX_EDG_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(idxTables.get(pkey));
 				try {
@@ -871,6 +889,7 @@ public class HRawGraph {
 				scan.addFamily(IDX_EDG_CF);
 				scan.setBatch(8192);
 				scan.setCaching(8192);
+				scan.setMaxVersions(1);
 				ResultScanner scanner;
 				final HTableInterface table = pool.getTable(idxTables.get(pkey));
 				try {
