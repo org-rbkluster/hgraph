@@ -17,6 +17,7 @@ public class HGraphTest extends AbstractHGraphTest {
 			Vertex v = g.addVertex(null);
 
 			v.setProperty("foo", "bar");
+			v.setProperty("qux", 12.34);
 			Assert.assertEquals("bar", v.getProperty("foo"));
 			
 			Assert.assertTrue(g.getVertices().iterator().hasNext());

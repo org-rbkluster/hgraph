@@ -6,9 +6,10 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.ExceptionFactory;
+import com.tinkerpop.blueprints.util.StringFactory;
 
 public class HGraphEdge extends HGraphElement implements Edge {
-	public static final String LABEL = HGraphEdge.class.getName() + ".label";
+	public static final String LABEL = StringFactory.LABEL;
 	
 	public HGraphEdge(HRawGraph raw, byte[] id) {
 		super(raw, id);
@@ -35,5 +36,7 @@ public class HGraphEdge extends HGraphElement implements Edge {
 	public String getLabel() {
 		return getProperty(LABEL);
 	}
+	
+	
 
 }

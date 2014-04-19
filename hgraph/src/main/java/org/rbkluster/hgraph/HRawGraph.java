@@ -65,7 +65,7 @@ public class HRawGraph {
 	
 	protected HTableInterface table(byte[] tableName) {
 		HTableInterface table = _pool.getTable(tableName);
-//		table.setAutoFlush(true);
+		table.setAutoFlush(true);
 		return table;
 	}
 	

@@ -99,6 +99,9 @@ public abstract class HGraphElement implements Element {
 			keys.add(Bytes.toString(k));
 		}
 		
+		if(this instanceof Edge)
+			keys.remove(HGraphEdge.LABEL);
+		
 		return keys;
 	}
 
