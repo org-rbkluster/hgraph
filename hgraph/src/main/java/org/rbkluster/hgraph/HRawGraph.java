@@ -26,10 +26,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.rbkluster.hgraph.GConstants.*;
 
 public class HRawGraph {
+	private static final Logger log = LoggerFactory.getLogger(HRawGraph.class);
+	
 	public static final int DEFAULT_ID_LENGTH = 24;
 	
 	protected byte[] prefix;
@@ -47,6 +51,9 @@ public class HRawGraph {
 	public HRawGraph(byte[] prefix, Configuration conf) throws IOException {
 		this.prefix = tableEscape(prefix);
 		this.conf = conf;
+
+		log.info("{} creating graph", this);
+		
 		_pool = new HTablePool(conf, Integer.MAX_VALUE);
 		vtxTable = Bytes.add(this.prefix, VTX_TABLE);
 		vtxPropertiesTable = Bytes.add(this.prefix, VTXP_TABLE);
@@ -99,35 +106,50 @@ public class HRawGraph {
 	}
 	
 	public void createTables() throws IOException {
+		log.info("{} creating tables", this);
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
 			HTableDescriptor d = new HTableDescriptor(vtxTable);
 			d.addFamily(new HColumnDescriptor(VTX_CF));
 			d.addFamily(new HColumnDescriptor(VTX_OUT_CF));
 			d.addFamily(new HColumnDescriptor(VTX_IN_CF));
-			if(!admin.tableExists(d.getName()))
+			if(!admin.tableExists(d.getName())) {
+				log.debug("{} creating table {}", this, d.getNameAsString());
 				admin.createTable(d);
+			} else
+				log.debug("{} table {} already exists", this, d.getNameAsString());
 			
 			d = new HTableDescriptor(vtxPropertiesTable);
 			d.addFamily(new HColumnDescriptor(VTXP_CF));
-			if(!admin.tableExists(d.getName()))
+			if(!admin.tableExists(d.getName())) {
+				log.debug("{} creating table {}", this, d.getNameAsString());
 				admin.createTable(d);
+			} else
+				log.debug("{} table {} already exists", this, d.getNameAsString());
 			
 			d = new HTableDescriptor(edgTable);
 			d.addFamily(new HColumnDescriptor(EDG_CF));
-			if(!admin.tableExists(d.getName()))
+			if(!admin.tableExists(d.getName())) {
+				log.debug("{} creating table {}", this, d.getNameAsString());
 				admin.createTable(d);
+			} else
+				log.debug("{} table {} already exists", this, d.getNameAsString());
 			
 			d = new HTableDescriptor(edgPropertiesTable);
 			d.addFamily(new HColumnDescriptor(EDGP_CF));
-			if(!admin.tableExists(d.getName()))
+			if(!admin.tableExists(d.getName())) {
+				log.debug("{} creating table {}", this, d.getNameAsString());
 				admin.createTable(d);
+			} else
+				log.debug("{} table {} already exists", this, d.getNameAsString());
 		} finally {
 			admin.close();
 		}
+		log.debug("{} tables created", this);
 	}
 	
 	public void loadIndexTables() throws IOException {
+		log.debug("{} loading index tables", this);
 		idxTables.clear();
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
@@ -136,6 +158,7 @@ public class HRawGraph {
 				if(Bytes.startsWith(d.getName(), p)) {
 					byte[] k = Bytes.tail(d.getName(), d.getName().length - p.length);
 					idxTables.put(tableUnescape(k), d.getName());
+					log.trace("{} loaded index table {}", this, d.getNameAsString());
 				}
 			}
 		} finally {
@@ -144,29 +167,34 @@ public class HRawGraph {
 	}
 	
 	public void dropTables() throws IOException {
+		log.info("{} dropping tables", this);
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
 			if(admin.tableExists(vtxTable)) {
 				if(!admin.isTableDisabled(vtxTable))
 					admin.disableTable(vtxTable);
+				log.debug("{} dropping table {}", this, Bytes.toString(vtxTable));
 				admin.deleteTable(vtxTable);
 			}
 			
 			if(admin.tableExists(vtxPropertiesTable)) {
 				if(!admin.isTableDisabled(vtxPropertiesTable))
 					admin.disableTable(vtxPropertiesTable);
+				log.debug("{} dropping table {}", this, Bytes.toString(vtxPropertiesTable));
 				admin.deleteTable(vtxPropertiesTable);
 			}
 			
 			if(admin.tableExists(edgTable)) {
 				if(!admin.isTableDisabled(edgTable))
 					admin.disableTable(edgTable);
+				log.debug("{} dropping table {}", this, Bytes.toString(edgTable));
 				admin.deleteTable(edgTable);
 			}
 			
 			if(admin.tableExists(edgPropertiesTable)) {
 				if(!admin.isTableDisabled(edgPropertiesTable))
 					admin.disableTable(edgPropertiesTable);
+				log.debug("{} dropping table {}", this, Bytes.toString(edgPropertiesTable));
 				admin.deleteTable(edgPropertiesTable);
 			}
 			
@@ -174,15 +202,18 @@ public class HRawGraph {
 				if(Bytes.startsWith(d.getName(), Bytes.add(prefix, IDX_TABLE))) {
 					if(!admin.isTableDisabled(d.getName()))
 						admin.disableTable(d.getName());
+					log.debug("{} dropping table {}", this, d.getNameAsString());
 					admin.deleteTable(d.getName());
 				}
 			}
 		} finally {
 			admin.close();
 		}
+		log.debug("{} tables dropped", this);
 	}
 	
 	public void shutdown() throws IOException {
+		log.info("{} shutdown", this);
 		_pool.close();
 	}
 	
@@ -830,6 +861,7 @@ public class HRawGraph {
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
 			HTableDescriptor d = new HTableDescriptor(Bytes.add(prefix, IDX_TABLE, tkey));
+			log.info("{} creating index table {}", this, d.getNameAsString());
 			d.addFamily(new HColumnDescriptor(IDX_VTX_CF));
 			d.addFamily(new HColumnDescriptor(IDX_EDG_CF));
 			admin.createTable(d);
@@ -843,6 +875,7 @@ public class HRawGraph {
 	public void dropIndex(byte[] pkey) throws IOException {
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
+			log.info("{} dropping index table {}", this, Bytes.toString(idxTables.get(pkey)));
 			admin.disableTable(idxTables.get(pkey));
 			admin.deleteTable(idxTables.get(pkey));
 			idxTables.remove(pkey);
@@ -856,6 +889,7 @@ public class HRawGraph {
 	}
 	
 	public void reindexVertices(byte[] pkey) throws IOException {
+		log.info("{} reindexing vertex property {}", this, Bytes.toStringBinary(pkey));
 		for(byte[] vid : getAllVertices()) {
 			byte[] pval = getVertexProperty(vid, pkey);
 			if(pval != null)
@@ -864,6 +898,7 @@ public class HRawGraph {
 	}
 	
 	public void reindexEdges(byte[] pkey) throws IOException {
+		log.info("{} reindexing edge property {}", this, Bytes.toStringBinary(pkey));
 		for(byte[] vid : getAllEdges()) {
 			byte[] pval = getEdgeProperty(vid, pkey);
 			if(pval != null)
@@ -1153,5 +1188,10 @@ public class HRawGraph {
 
 	public byte[] getPrefix() {
 		return prefix;
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "[" + Bytes.toString(prefix) + "]";
 	}
 }
