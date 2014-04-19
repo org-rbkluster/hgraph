@@ -529,14 +529,143 @@ public class HGraph {
 		}
 	}
 	
-	public void dropIndex(byte[] key) throws IOException {
+	public void dropIndex(byte[] pkey) throws IOException {
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
-			admin.disableTable(idxTables.get(key));
-			admin.deleteTable(idxTables.get(key));
-			idxTables.remove(key);
+			admin.disableTable(idxTables.get(pkey));
+			admin.deleteTable(idxTables.get(pkey));
+			idxTables.remove(pkey);
 		} finally {
 			admin.close();
 		}
+	}
+	
+	public Iterable<byte[][]> getIndexedVertices(final byte[] pkey, final byte[] pval) {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				Scan scan = new Scan(pval);
+				scan.setStopRow(GBytes.endKey(pval));
+				scan.addFamily(IDX_VTX_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				ResultScanner scanner;
+				final HTableInterface table = pool.getTable(idxTables.get(pkey));
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[][]>() {
+					byte[][] next;
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[][] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+						byte[][] n = next;
+						next = null;
+						return n;
+					}
+					
+					@Override
+					public boolean hasNext() {
+						while(next == null) {
+							if(!sci.hasNext())
+								break;
+							Result r = sci.next();
+							if(r.getValue(IDX_VTX_CF, pval) == null)
+								continue;
+							byte[] vid = r.getValue(IDX_VTX_CF, pval);
+							next = new byte[][] {pkey, pval, vid};
+						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
+						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
+					}
+				};
+			}
+		};
+	}
+
+
+	public Iterable<byte[][]> getIndexedEdges(final byte[] pkey, final byte[] pval) {
+		return new Iterable<byte[][]>() {
+			@Override
+			public Iterator<byte[][]> iterator() {
+				Scan scan = new Scan(pval);
+				scan.setStopRow(GBytes.endKey(pval));
+				scan.addFamily(IDX_EDG_CF);
+				scan.setBatch(8192);
+				scan.setCaching(8192);
+				ResultScanner scanner;
+				final HTableInterface table = pool.getTable(idxTables.get(pkey));
+				try {
+					scanner = table.getScanner(scan);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+				final Iterator<Result> sci = scanner.iterator();
+				
+				return new Iterator<byte[][]>() {
+					byte[][] next;
+					
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+					@Override
+					public byte[][] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+						byte[][] n = next;
+						next = null;
+						return n;
+					}
+					
+					@Override
+					public boolean hasNext() {
+						while(next == null) {
+							if(!sci.hasNext())
+								break;
+							Result r = sci.next();
+							if(r.getValue(IDX_EDG_CF, pval) == null)
+								continue;
+							byte[] eid = r.getValue(IDX_EDG_CF, pval);
+							next = new byte[][] {pkey, pval, eid};
+						}
+						if(next == null)
+							try {
+								table.close();
+							} catch(IOException e) {
+								throw new RuntimeException(e);
+							}
+						return next != null;
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
+					}
+				};
+			}
+		};
 	}
 }
