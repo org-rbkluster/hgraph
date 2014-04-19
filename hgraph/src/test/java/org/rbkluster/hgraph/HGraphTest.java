@@ -84,13 +84,17 @@ public class HGraphTest extends AbstractHGraphTest {
 			exp.add(v1);
 
 			Assert.assertEquals(exp, bars);
+			
+			bars.clear();
+			for(byte[][] iv : hg.getIndexedVertices(foo, Bytes.toBytes("baq"), Bytes.toBytes("bas")))
+				bars.add(iv[2]);
+			Assert.assertEquals(exp, bars);
 
 			hg.removeVertexProperty(v1, foo);
 			
 			bars.clear(); exp.clear();
 			for(byte[][] iv : hg.getIndexedVertices(foo, bar))
 				bars.add(iv[2]);
-			
 			Assert.assertEquals(exp, bars);
 		} finally {
 			hg.dropTables();
