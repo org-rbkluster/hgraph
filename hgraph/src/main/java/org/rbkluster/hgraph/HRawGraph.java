@@ -3,11 +3,13 @@ package org.rbkluster.hgraph;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -120,6 +122,10 @@ public class HRawGraph {
 		}
 	}
 	
+	public void shutdown() throws IOException {
+		pool.close();
+	}
+	
 	public byte[] addVertex(byte[] vid) throws IOException {
 		if(vid == null) {
 			vid = new byte[DEFAULT_ID_LENGTH];
@@ -134,6 +140,17 @@ public class HRawGraph {
 			table.close();
 		}
 		return vid;
+	}
+	
+	public boolean vertexExists(byte[] vid) throws IOException {
+		HTableInterface table = pool.getTable(vtxTable);
+		try {
+			Get g = new Get(vid);
+			g.addColumn(VTX_CF, VTX_IS_Q);
+			return table.get(g).getValue(VTX_CF, VTX_IS_Q) != null;
+		} finally {
+			table.close();
+		}
 	}
 	
 	public void removeVertex(byte[] vid) throws IOException {
@@ -178,6 +195,17 @@ public class HRawGraph {
 			table.close();
 		}
 		return eid;
+	}
+	
+	public boolean edgeExists(byte[] eid) throws IOException {
+		HTableInterface table = pool.getTable(edgTable);
+		try {
+			Get g = new Get(eid);
+			g.addColumn(EDG_CF, EDG_IS_Q);
+			return table.get(g).getValue(EDG_CF, EDG_IS_Q) != null;
+		} finally {
+			table.close();
+		}
 	}
 	
 	public void removeEdge(byte[] eid) throws IOException {
@@ -630,6 +658,10 @@ public class HRawGraph {
 		} finally {
 			admin.close();
 		}
+	}
+	
+	public Set<byte[]> getIndexKeys() {
+		return Collections.unmodifiableSet(idxTables.keySet());
 	}
 	
 	public Iterable<byte[][]> getIndexedVertices(final byte[] pkey, final byte[] pval) {
