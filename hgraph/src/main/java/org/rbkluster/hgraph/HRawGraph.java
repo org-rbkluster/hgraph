@@ -45,13 +45,13 @@ public class HRawGraph {
 	protected SecureRandom random = new SecureRandom();
 	
 	public HRawGraph(byte[] prefix, Configuration conf) throws IOException {
-		this.prefix = prefix;
+		this.prefix = tableEscape(prefix);
 		this.conf = conf;
 		_pool = new HTablePool(conf, Integer.MAX_VALUE);
-		vtxTable = Bytes.add(prefix, VTX_TABLE);
-		vtxPropertiesTable = Bytes.add(prefix, VTXP_TABLE);
-		edgTable = Bytes.add(prefix, EDG_TABLE);
-		edgPropertiesTable = Bytes.add(prefix, EDGP_TABLE);
+		vtxTable = Bytes.add(this.prefix, VTX_TABLE);
+		vtxPropertiesTable = Bytes.add(this.prefix, VTXP_TABLE);
+		edgTable = Bytes.add(this.prefix, EDG_TABLE);
+		edgPropertiesTable = Bytes.add(this.prefix, EDGP_TABLE);
 		
 		loadIndexTables();
 	}
@@ -60,6 +60,38 @@ public class HRawGraph {
 		HTableInterface table = _pool.getTable(tableName);
 //		table.setAutoFlush(true);
 		return table;
+	}
+	
+	public static byte[] tableEscape(byte[] k) {
+		StringBuilder sb = new StringBuilder();
+		for(byte b : k) {
+			char c = (char) b;
+			if(
+					c >= 'a' && c <= 'z'
+					|| c >= 'A' && c <= 'Z'
+					|| c >= '0' && c <= '9'
+					|| c == '_'
+					|| c == '-'
+					|| c == '.')
+				sb.append(c);
+			else
+				sb.append(String.format("_%02x", 0xff & (int) b));
+		}
+		return Bytes.toBytes(sb.toString());
+	}
+	
+	public static byte[] tableUnescape(byte[] k) {
+		String hex = Bytes.toString(k);
+		ByteArrayOutputStream bout = new ByteArrayOutputStream();
+		for(int i = 0; i < hex.length(); i++) {
+			if(hex.charAt(i) != '_')
+				bout.write(hex.charAt(i));
+			else {
+				bout.write(Integer.parseInt(hex.substring(i+1, i+3), 16));
+				i += 2;
+			}
+		}
+		return bout.toByteArray();
 	}
 	
 	protected void repool(HTableInterface table) throws IOException {
@@ -103,18 +135,7 @@ public class HRawGraph {
 				byte[] p = Bytes.add(prefix, IDX_TABLE);
 				if(Bytes.startsWith(d.getName(), p)) {
 					byte[] k = Bytes.tail(d.getName(), d.getName().length - p.length);
-					String hex = Bytes.toString(k);
-					ByteArrayOutputStream bout = new ByteArrayOutputStream();
-					for(int i = 0; i < hex.length(); i++) {
-						if(hex.charAt(i) != '_')
-							bout.write(hex.charAt(i));
-						else {
-							bout.write(Integer.parseInt(hex.substring(i+1, i+3), 16));
-							i += 2;
-						}
-					}
-					k = bout.toByteArray();
-					idxTables.put(k, d.getName());
+					idxTables.put(tableUnescape(k), d.getName());
 				}
 			}
 		} finally {
@@ -804,21 +825,7 @@ public class HRawGraph {
 	}
 
 	public void createIndex(byte[] pkey) throws IOException {
-		StringBuilder sb = new StringBuilder();
-		for(byte b : pkey) {
-			char c = (char) b;
-			if(
-					c >= 'a' && c <= 'z'
-					|| c >= 'A' && c <= 'Z'
-					|| c >= '0' && c <= '9'
-					|| c == '_'
-					|| c == '-'
-					|| c == '.')
-				sb.append(c);
-			else
-				sb.append(String.format("_%02x", 0xff & (int) b));
-		}
-		byte[] tkey = Bytes.toBytes(sb.toString());
+		byte[] tkey = tableEscape(pkey);
 		
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
