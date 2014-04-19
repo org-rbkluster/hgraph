@@ -66,6 +66,8 @@ public abstract class HGraphElement implements Element {
 		byte[] typeKeyBytes = Bytes.add(keyBytes, TYPE_SUFFIX);
 		byte[] keyValue = getRawProperty(keyBytes);
 		byte[] typeValue = getRawProperty(typeKeyBytes);
+		if(keyValue == null || typeValue == null)
+			return null;
 		return (T) GBytes.fromKryoBytes(Bytes.add(typeValue, keyValue));
 	}
 

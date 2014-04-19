@@ -59,14 +59,17 @@ public class HGraphTestSuite extends GraphTest {
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
-					System.out.println("Testing " + method.getName() + "...");
-					method.invoke(testSuite);
-					methodName = null;
-					
 					try {
-						raw.dropTables();
-					} catch(IOException e) {
-						throw new RuntimeException(e);
+						System.out.println("Testing " + method.getName() + "...");
+						method.invoke(testSuite);
+					} finally {
+						methodName = null;
+
+						try {
+							raw.dropTables();
+						} catch(IOException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 			}

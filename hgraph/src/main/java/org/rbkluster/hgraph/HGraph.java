@@ -1,7 +1,9 @@
 package org.rbkluster.hgraph;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -120,6 +122,8 @@ public class HGraph implements Graph, KeyIndexableGraph {
 			public Iterator<Vertex> iterator() {
 				final Iterator<byte[]> vids = raw.getAllVertices().iterator();
 				return new Iterator<Vertex>() {
+					byte[] next;
+					
 					@Override
 					public void remove() {
 						throw new UnsupportedOperationException();
@@ -127,12 +131,25 @@ public class HGraph implements Graph, KeyIndexableGraph {
 					
 					@Override
 					public Vertex next() {
-						return new HGraphVertex(raw, vids.next());
+						if(!hasNext())
+							throw new NoSuchElementException();
+						try {
+							return new HGraphVertex(raw, next);
+						} finally {
+							next = null;
+						}
 					}
 					
 					@Override
 					public boolean hasNext() {
-						return vids.hasNext();
+						while(next == null) {
+							if(!vids.hasNext())
+								break;
+							byte[] n = vids.next();
+							if(!Arrays.equals(META_ROW, n))
+								next = n;
+						}
+						return next != null;
 					}
 				};
 			}
@@ -318,10 +335,11 @@ public class HGraph implements Graph, KeyIndexableGraph {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public <T extends Element> void createKeyIndex(String key, Class<T> elementClass, Parameter... indexParameters) {
+		boolean add = false;
 		if(elementClass == Vertex.class)
-			vertexIndexes.add(key);
+			add = vertexIndexes.add(key);
 		if(elementClass == Edge.class)
-			edgeIndexes.add(key);
+			add = edgeIndexes.add(key);
 		try {
 			raw.setVertexProperty(META_ROW, VERTEX_INDEXES, GBytes.toKryoBytes(vertexIndexes));
 			raw.setVertexProperty(META_ROW, EDGE_INDEXES, GBytes.toKryoBytes(edgeIndexes));
@@ -329,12 +347,16 @@ public class HGraph implements Graph, KeyIndexableGraph {
 			throw new RuntimeException(e);
 		}
 		byte[] pkey = Bytes.toBytes(key);
-		if(!raw.getIndexKeys().contains(pkey))
-			try {
+		try {
+			if(!raw.getIndexKeys().contains(pkey))
 				raw.createIndex(pkey);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
+			if(add && elementClass == Vertex.class)
+				raw.reindexVertices(pkey);
+			if(add && elementClass == Edge.class)
+				raw.reindexEdges(pkey);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override

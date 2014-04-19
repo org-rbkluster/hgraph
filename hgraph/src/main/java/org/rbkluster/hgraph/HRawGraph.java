@@ -1,5 +1,6 @@
 package org.rbkluster.hgraph;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -92,6 +93,17 @@ public class HRawGraph {
 				byte[] p = Bytes.add(prefix, IDX_TABLE);
 				if(Bytes.startsWith(d.getName(), p)) {
 					byte[] k = Bytes.tail(d.getName(), d.getName().length - p.length);
+					String hex = Bytes.toString(k);
+					ByteArrayOutputStream bout = new ByteArrayOutputStream();
+					for(int i = 0; i < hex.length(); i++) {
+						if(hex.charAt(i) != '_')
+							bout.write(hex.charAt(i));
+						else {
+							bout.write(Integer.parseInt(hex.substring(i+1, i+3), 16));
+							i += 2;
+						}
+					}
+					k = bout.toByteArray();
 					idxTables.put(k, d.getName());
 				}
 			}
@@ -180,7 +192,7 @@ public class HRawGraph {
 				scan.setBatch(8192);
 				scan.setCaching(8192);
 				scan.setMaxVersions(1);
-				HTableInterface table = pool.getTable(vtxTable);
+				final HTableInterface table = pool.getTable(vtxTable);
 				ResultScanner scanner;
 				try {
 					scanner = table.getScanner(scan);
@@ -198,12 +210,25 @@ public class HRawGraph {
 					
 					@Override
 					public byte[] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
 						return sci.next().getRow();
 					}
 					
 					@Override
 					public boolean hasNext() {
+						if(!sci.hasNext())
+							try {
+								table.close();
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
 						return sci.hasNext();
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
 					}
 				};
 			}
@@ -275,7 +300,7 @@ public class HRawGraph {
 				scan.setBatch(8192);
 				scan.setCaching(8192);
 				scan.setMaxVersions(1);
-				HTableInterface table = pool.getTable(edgTable);
+				final HTableInterface table = pool.getTable(edgTable);
 				ResultScanner scanner;
 				try {
 					scanner = table.getScanner(scan);
@@ -293,12 +318,25 @@ public class HRawGraph {
 					
 					@Override
 					public byte[] next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
 						return sci.next().getRow();
 					}
 					
 					@Override
 					public boolean hasNext() {
+						if(!sci.hasNext())
+							try {
+								table.close();
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
 						return sci.hasNext();
+					}
+					
+					@Override
+					protected void finalize() throws Throwable {
+						table.close();
 					}
 				};
 			}
@@ -748,9 +786,25 @@ public class HRawGraph {
 	}
 
 	public void createIndex(byte[] pkey) throws IOException {
+		StringBuilder sb = new StringBuilder();
+		for(byte b : pkey) {
+			char c = (char) b;
+			if(
+					c >= 'a' && c <= 'z'
+					|| c >= 'A' && c <= 'Z'
+					|| c >= '0' && c <= '9'
+					|| c == '_'
+					|| c == '-'
+					|| c == '.')
+				sb.append(c);
+			else
+				sb.append(String.format("_%02x", 0xff & (int) b));
+		}
+		byte[] tkey = Bytes.toBytes(sb.toString());
+		
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		try {
-			HTableDescriptor d = new HTableDescriptor(Bytes.add(prefix, IDX_TABLE, pkey));
+			HTableDescriptor d = new HTableDescriptor(Bytes.add(prefix, IDX_TABLE, tkey));
 			d.addFamily(new HColumnDescriptor(IDX_VTX_CF));
 			d.addFamily(new HColumnDescriptor(IDX_EDG_CF));
 			admin.createTable(d);
@@ -774,6 +828,22 @@ public class HRawGraph {
 	
 	public Set<byte[]> getIndexKeys() {
 		return Collections.unmodifiableSet(idxTables.keySet());
+	}
+	
+	public void reindexVertices(byte[] pkey) throws IOException {
+		for(byte[] vid : getAllVertices()) {
+			byte[] pval = getVertexProperty(vid, pkey);
+			if(pval != null)
+				setVertexProperty(vid, pkey, pval);
+		}
+	}
+	
+	public void reindexEdges(byte[] pkey) throws IOException {
+		for(byte[] vid : getAllEdges()) {
+			byte[] pval = getEdgeProperty(vid, pkey);
+			if(pval != null)
+				setEdgeProperty(vid, pkey, pval);
+		}
 	}
 	
 	public Iterable<byte[][]> getIndexedVertices(final byte[] pkey, final byte[] pval) {
