@@ -54,7 +54,7 @@ public class HRawGraph {
 
 		log.info("{} creating graph", this);
 		
-		_pool = new HTablePool(conf, Integer.MAX_VALUE);
+		_pool = new HTablePool(conf, 1);
 		vtxTable = Bytes.add(this.prefix, VTX_TABLE);
 		vtxPropertiesTable = Bytes.add(this.prefix, VTXP_TABLE);
 		edgTable = Bytes.add(this.prefix, EDG_TABLE);
@@ -102,6 +102,7 @@ public class HRawGraph {
 	}
 	
 	protected void repool(HTableInterface table) throws IOException {
+		table.flushCommits();
 		_pool.putTable(table);
 	}
 	
@@ -614,8 +615,8 @@ public class HRawGraph {
 		
 		HTableInterface table = table(vtxPropertiesTable);
 		try {
-			Put p = new Put(vid);
-			p.add(VTXP_CF, pkey, pval);
+			Put p = new Put(Bytes.add(vid, pkey));
+			p.add(VTXP_CF, vid, pval);
 			table.put(p);
 		} finally {
 			repool(table);
@@ -636,10 +637,10 @@ public class HRawGraph {
 	public byte[] getVertexProperty(byte[] vid, byte[] pkey) throws IOException {
 		HTableInterface table = table(vtxPropertiesTable);
 		try {
-			Get g = new Get(vid);
-			g.addColumn(VTXP_CF, pkey);
+			Get g = new Get(Bytes.add(vid, pkey));
+			g.addColumn(VTXP_CF, vid);
 			Result r = table.get(g);
-			return r.getValue(VTXP_CF, pkey);
+			return r.getValue(VTXP_CF, vid);
 		} finally {
 			repool(table);
 		}
@@ -652,8 +653,8 @@ public class HRawGraph {
 		
 		HTableInterface table = table(vtxPropertiesTable);
 		try {
-			Delete d = new Delete(vid);
-			d.deleteColumn(VTXP_CF, pkey);
+			Delete d = new Delete(Bytes.add(vid, pkey));
+			d.deleteColumn(VTXP_CF, vid);
 			table.delete(d);
 		} finally {
 			repool(table);
@@ -674,8 +675,8 @@ public class HRawGraph {
 	public void removeVertexProperty(byte[] vid, byte[] pkey, byte[] pval) throws IOException {
 		HTableInterface table = table(vtxPropertiesTable);
 		try {
-			Delete d = new Delete(vid);
-			d.deleteColumn(VTXP_CF, pkey);
+			Delete d = new Delete(Bytes.add(vid, pkey));
+			d.deleteColumn(VTXP_CF, vid);
 			table.delete(d);
 		} finally {
 			repool(table);
@@ -696,13 +697,6 @@ public class HRawGraph {
 	public void removeVertexProperties(byte[] vid) throws IOException {
 		for(byte[][] p : getVertexProperties(vid))
 			removeVertexProperty(vid, p[0], p[1]);
-		HTableInterface table = table(vtxPropertiesTable);
-		try {
-			Delete d = new Delete(vid);
-			table.delete(d);
-		} finally {
-			repool(table);
-		}
 	}
 	
 	public Iterable<byte[][]> getVertexProperties(final byte[] vid) throws IOException {
@@ -713,12 +707,22 @@ public class HRawGraph {
 				try {
 					HTableInterface table = table(vtxPropertiesTable);
 					try {
-						Get g = new Get(vid);
-						g.addFamily(VTXP_CF);
-						Result r = table.get(g);
-						if(r.getFamilyMap(VTXP_CF) != null)
-							for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
-								ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
+//						Get g = new Get(vid);
+//						g.addFamily(VTXP_CF);
+//						Result r = table.get(g);
+//						if(r.getFamilyMap(VTXP_CF) != null)
+//							for(byte[] pkey : r.getFamilyMap(VTXP_CF).keySet())
+//								ret.add(new byte[][] {pkey, r.getValue(VTXP_CF, pkey)});
+						Scan scan = new Scan(vid);
+						scan.setStopRow(GBytes.endKey(vid));
+						scan.addColumn(VTXP_CF, vid);
+						scan.setBatch(8192);
+						scan.setCaching(8192);
+						for(Result r : table.getScanner(scan)) {
+							byte[] pkey = Bytes.tail(r.getRow(), r.getRow().length - vid.length);
+							byte[] pval = r.getValue(VTXP_CF, vid);
+							ret.add(new byte[][] {pkey, pval});
+						}
 					} finally {
 						repool(table);
 					}
@@ -735,8 +739,8 @@ public class HRawGraph {
 		
 		HTableInterface table = table(edgPropertiesTable);
 		try {
-			Put p = new Put(eid);
-			p.add(EDGP_CF, pkey, pval);
+			Put p = new Put(Bytes.add(eid, pkey));
+			p.add(EDGP_CF, eid, pval);
 			table.put(p);
 		} finally {
 			repool(table);
@@ -757,8 +761,8 @@ public class HRawGraph {
 	public byte[] getEdgeProperty(byte[] eid, byte[] pkey) throws IOException {
 		HTableInterface table = table(edgPropertiesTable);
 		try {
-			Get g = new Get(eid);
-			g.addColumn(EDGP_CF, pkey);
+			Get g = new Get(Bytes.add(eid, pkey));
+			g.addColumn(EDGP_CF, eid);
 			Result r = table.get(g);
 			return r.getValue(EDGP_CF, pkey);
 		} finally {
@@ -773,8 +777,8 @@ public class HRawGraph {
 		
 		HTableInterface table = table(edgPropertiesTable);
 		try {
-			Delete d = new Delete(eid);
-			d.deleteColumn(EDGP_CF, pkey);
+			Delete d = new Delete(Bytes.add(eid, pkey));
+			d.deleteColumn(EDGP_CF, eid);
 			table.delete(d);
 		} finally {
 			repool(table);
@@ -795,8 +799,8 @@ public class HRawGraph {
 	public void removeEdgeProperty(byte[] eid, byte[] pkey, byte[] pval) throws IOException {
 		HTableInterface table = table(edgPropertiesTable);
 		try {
-			Delete d = new Delete(eid);
-			d.deleteColumn(EDGP_CF, pkey);
+			Delete d = new Delete(Bytes.add(eid, pkey));
+			d.deleteColumn(EDGP_CF, eid);
 			table.delete(d);
 		} finally {
 			repool(table);
@@ -817,13 +821,6 @@ public class HRawGraph {
 	public void removeEdgeProperties(byte[] eid) throws IOException {
 		for(byte[][] p : getEdgeProperties(eid))
 			removeEdgeProperty(eid, p[0], p[1]);
-		HTableInterface table = table(edgPropertiesTable);
-		try {
-			Delete d = new Delete(eid);
-			table.delete(d);
-		} finally {
-			repool(table);
-		}
 	}
 	
 	public Iterable<byte[][]> getEdgeProperties(final byte[] eid) throws IOException {
@@ -834,12 +831,22 @@ public class HRawGraph {
 				try {
 					HTableInterface table = table(edgPropertiesTable);
 					try {
-						Get g = new Get(eid);
-						g.addFamily(EDGP_CF);
-						Result r = table.get(g);
-						if(r.getFamilyMap(EDGP_CF) != null)
-							for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
-								ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
+//						Get g = new Get(eid);
+//						g.addFamily(EDGP_CF);
+//						Result r = table.get(g);
+//						if(r.getFamilyMap(EDGP_CF) != null)
+//							for(byte[] pkey : r.getFamilyMap(EDGP_CF).keySet())
+//								ret.add(new byte[][] {pkey, r.getValue(EDGP_CF, pkey)});
+						Scan scan = new Scan(eid);
+						scan.setStopRow(GBytes.endKey(eid));
+						scan.addColumn(EDGP_CF, eid);
+						scan.setBatch(8192);
+						scan.setCaching(8192);
+						for(Result r : table.getScanner(scan)) {
+							byte[] pkey = Bytes.tail(r.getRow(), r.getRow().length - eid.length);
+							byte[] pval = r.getValue(EDGP_CF, eid);
+							ret.add(new byte[][] {pkey, pval});
+						}
 					} finally {
 						repool(table);
 					}
